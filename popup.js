@@ -285,7 +285,7 @@ async function deleteRecord(recordId) {
     }
 }
 
-// Send the selected journey to the existing background autofill flow.
+// Send the selected journey to the background autofill flow.
 async function autoFillRecord(record) {
     const booking = getBookingDetails(record);
 
@@ -324,6 +324,7 @@ async function autoFillRecord(record) {
             return;
         }
 
+        // Send the request to the background script.
         chrome.runtime.sendMessage(
             {
                 action: "START_BACKGROUND_AUTOFILL",
@@ -331,28 +332,25 @@ async function autoFillRecord(record) {
             },
             response => {
                 if (chrome.runtime.lastError) {
-                    showStatus(
-                        chrome.runtime.lastError.message,
-                        "error"
+                    console.error(
+                        "Auto-Fill error:",
+                        chrome.runtime.lastError.message
                     );
                     return;
                 }
 
-                if (response && response.success) {
-                    showStatus(
-                        "Auto-Fill started successfully.",
-                        "success"
-                    );
-                } else {
-                    showStatus(
-                        response && response.message
-                            ? response.message
-                            : "Auto-Fill could not be started.",
-                        "error"
+                if (!response || !response.success) {
+                    console.error(
+                        "Auto-Fill could not start:",
+                        response?.message || "Unknown error"
                     );
                 }
             }
         );
+
+        // Close the extension popup immediately.
+        window.close();
+
     } catch (error) {
         console.error("Auto-Fill failed:", error);
 
