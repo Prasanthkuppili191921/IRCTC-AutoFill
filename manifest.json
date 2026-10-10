@@ -1,0 +1,26 @@
+
+{
+  "manifest_version": 3,
+  "name": "IRCTC AutoFill Assistant",
+  "version": "1.0.0",
+  "description": "Fill passenger details on IRCTC booking forms.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.irctc.co.in/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "IRCTC AutoFill",
+    "default_popup": "popup.html"
+  }
+}

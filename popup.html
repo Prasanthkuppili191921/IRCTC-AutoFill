@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRCTC AutoFill</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 340px;
+            padding: 14px;
+            box-sizing: border-box;
+            color: #243653;
+        }
+
+        h2 {
+            margin: 0 0 14px;
+            text-align: center;
+        }
+
+        h3 {
+            margin: 18px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            font-size: 15px;
+        }
+
+        label {
+            display: block;
+            margin: 9px 0 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #c8ced8;
+            border-radius: 4px;
+            font-size: 13px;
+            background: white;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .checkbox-row input {
+            width: auto;
+            margin: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            border: none;
+            border-radius: 4px;
+            background: #087e8b;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #066873;
+        }
+
+        #status {
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .date-row {
+            position: relative;
+        }
+
+        .date-row #journeyDate {
+            width: 100%;
+        }
+
+        #journeyDatePicker {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            left: 0;
+            bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>IRCTC AutoFill</h2>
+
+    <h3>Login Details</h3>
+
+    <form id="loginForm">
+        <label for="username">IRCTC Username</label>
+        <input
+            id="username"
+            type="text"
+            autocomplete="username"
+            placeholder="Enter username"
+            required
+        >
+
+        <label for="password">IRCTC Password</label>
+        <input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Enter password"
+            required
+        >
+
+        <button type="submit">Save Login Details</button>
+    </form>
+
+    <button id="fillLogin" type="button">Auto-Fill Login</button>
+
+    <h3>Journey Details</h3>
+
+    <form id="bookingForm">
+        <label for="fromStation">From Station</label>
+        <input
+            id="fromStation"
+            type="text"
+            placeholder="e.g. SC"
+            autocomplete="off"
+            required
+        >
+
+        <label for="toStation">To Station</label>
+        <input
+            id="toStation"
+            type="text"
+            placeholder="e.g. MAS"
+            autocomplete="off"
+            required
+        >
+
+        <label for="journeyDate">Journey Date</label>
+
+        <div class="date-row">
+            <input
+                id="journeyDate"
+                name="journeyDate"
+                type="text"
+                placeholder="DD/MM/YYYY"
+                maxlength="10"
+                autocomplete="off"
+                required
+            >
+
+            <input
+                id="journeyDatePicker"
+                type="date"
+                aria-label="Choose journey date"
+                tabindex="-1"
+            >
+        </div>
+
+        <label for="travelClass">Class</label>
+        <select id="travelClass">
+            <option value="">Keep current selection</option>
+            <option value="All Classes">All Classes</option>
+            <option value="1A">AC First Class (1A)</option>
+            <option value="2A">AC 2 Tier (2A)</option>
+            <option value="3A">AC 3 Tier (3A)</option>
+            <option value="3E">AC 3 Economy (3E)</option>
+            <option value="CC">AC Chair Car (CC)</option>
+            <option value="EC">Executive Chair Car (EC)</option>
+            <option value="SL">Sleeper (SL)</option>
+            <option value="2S">Second Sitting (2S)</option>
+        </select>
+
+        <label for="quota">Quota</label>
+        <select id="quota">
+            <option value="">Keep current selection</option>
+            <option value="GENERAL">GENERAL</option>
+            <option value="TATKAL">TATKAL</option>
+            <option value="PREMIUM TATKAL">PREMIUM TATKAL</option>
+            <option value="LADIES">LADIES</option>
+            <option value="LOWER BERTH/SR.CITIZEN">LOWER BERTH/SR.CITIZEN</option>
+            <option value="PERSON WITH DISABILITY">PERSON WITH DISABILITY</option>
+        </select>
+
+        <div class="checkbox-row">
+            <input id="flexibleDate" type="checkbox">
+            <label for="flexibleDate">Flexible With Date</label>
+        </div>
+
+        <h3>Passenger Details</h3>
+
+        <label for="passengerName">Passenger Name</label>
+        <input
+            id="passengerName"
+            type="text"
+            placeholder="Full name"
+            autocomplete="off"
+        >
+
+        <label for="passengerAge">Age</label>
+        <input
+            id="passengerAge"
+            type="number"
+            min="1"
+            max="125"
+            placeholder="Age"
+        >
+
+        <label for="passengerGender">Gender</label>
+        <select id="passengerGender">
+            <option value="">Keep current selection</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="T">Transgender</option>
+        </select>
+
+        <h3>Preferences</h3>
+
+        <label for="berthPreference">Berth Preference</label>
+        <select id="berthPreference">
+            <option value="">No preference</option>
+            <option value="LOWER">Lower</option>
+            <option value="MIDDLE">Middle</option>
+            <option value="UPPER">Upper</option>
+            <option value="SIDE LOWER">Side Lower</option>
+            <option value="SIDE UPPER">Side Upper</option>
+        </select>
+
+        <label for="foodPreference">Food Preference</label>
+        <select id="foodPreference">
+            <option value="">No preference</option>
+            <option value="VEG">Vegetarian</option>
+            <option value="NONVEG">Non-Vegetarian</option>
+            <option value="JAIN">Jain Meal</option>
+        </select>
+
+        <button id="saveBooking" type="submit">
+            Save Booking Details
+        </button>
+    </form>
+
+    <button id="fillBooking" type="button">
+        Auto-Fill Booking Fields
+    </button>
+
+    <p id="status" role="status"></p>
+
+    <script src="popup.js"></script>
+</body>
+</html>
