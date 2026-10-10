@@ -1,0 +1,199 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Details - IRCTC AutoFill</title>
+    <link rel="stylesheet" href="booking.css">
+</head>
+<body>
+    <main class="page-container">
+        <section class="booking-card">
+            <header class="page-header">
+                <h1>JOURNEY DETAILS</h1>
+                <p>Enter your journey information</p>
+            </header>
+
+            <form id="bookingForm" novalidate>
+                <div class="station-grid">
+                    <div class="field-group">
+                        <label for="fromStation">From *</label>
+                        <div class="input-with-icon">
+                            <span class="field-icon" aria-hidden="true">➤</span>
+                            <input id="fromStation" type="text"
+                                   placeholder="From Station"
+                                   autocomplete="off" required>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="toStation">To *</label>
+                        <div class="input-with-icon">
+                            <span class="field-icon location-icon" aria-hidden="true">●</span>
+                            <input id="toStation" type="text"
+                                   placeholder="To Station"
+                                   autocomplete="off" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <div class="field-group date-field-group">
+                        <label for="journeyDate">Journey Date *</label>
+
+                        <div class="input-with-icon date-input-wrapper"
+                             id="dateInputWrapper">
+                            <button type="button"
+                                    id="openCalendar"
+                                    class="calendar-button"
+                                    aria-label="Open calendar"
+                                    aria-expanded="false"
+                                    aria-controls="calendarPopup">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="3.5" y="5.5" width="17" height="15" rx="2"></rect>
+                                    <path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17"></path>
+                                </svg>
+                            </button>
+
+                            <input id="journeyDate"
+                                   type="text"
+                                   placeholder="DD/MM/YYYY"
+                                   inputmode="numeric"
+                                   maxlength="10"
+                                   autocomplete="off"
+                                   aria-haspopup="dialog"
+                                   aria-controls="calendarPopup"
+                                   required>
+                        </div>
+
+                        <div id="calendarPopup"
+                             class="calendar-popup"
+                             role="dialog"
+                             aria-label="Choose journey date"
+                             hidden>
+                            <div class="calendar-header">
+                                <button type="button"
+                                        id="previousMonth"
+                                        class="month-nav"
+                                        aria-label="Previous month">
+                                    ‹
+                                </button>
+
+                                <button type="button"
+                                        id="monthYearButton"
+                                        class="month-year-button">
+                                    October 2026
+                                </button>
+
+                                <button type="button"
+                                        id="nextMonth"
+                                        class="month-nav"
+                                        aria-label="Next month">
+                                    ›
+                                </button>
+                            </div>
+
+                            <div class="calendar-weekdays" aria-hidden="true">
+                                <span>Su</span>
+                                <span>Mo</span>
+                                <span>Tu</span>
+                                <span>We</span>
+                                <span>Th</span>
+                                <span>Fr</span>
+                                <span>Sa</span>
+                            </div>
+
+                            <div id="calendarDays" class="calendar-days"></div>
+
+                            <div class="calendar-footer">
+                                <button type="button" id="clearCalendarDate">
+                                    Clear date
+                                </button>
+                                <button type="button" id="todayButton">
+                                    Today
+                                </button>
+                            </div>
+                        </div>
+
+                        <small>Enter a date or select it from the calendar.</small>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="travelClass">Travel Class</label>
+                        <div class="select-with-icon">
+                            <span class="field-icon" aria-hidden="true">▣</span>
+                            <select id="travelClass" required>
+                                <option value="">All Classes</option>
+                                <option value="1A">AC First Class (1A)</option>
+                                <option value="2A">AC 2 Tier (2A)</option>
+                                <option value="3A">AC 3 Tier (3A)</option>
+                                <option value="3E">AC 3 Economy (3E)</option>
+                                <option value="EA">Anubhuti Class (EA)</option>
+                                <option value="EC">Executive Chair Car (EC)</option>
+                                <option value="CC">AC Chair Car (CC)</option>
+                                <option value="SL">Sleeper (SL)</option>
+                                <option value="2S">Second Sitting (2S)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group quota-group">
+                        <label for="quota">Quota</label>
+                        <div class="select-with-icon">
+                            <span class="field-icon" aria-hidden="true">▦</span>
+                            <select id="quota" required>
+                                <option value="GN">GENERAL</option>
+                                <option value="TQ">TATKAL</option>
+                                <option value="PT">PREMIUM TATKAL</option>
+                                <option value="LD">LADIES</option>
+                                <option value="SS">LOWER BERTH / SENIOR CITIZEN</option>
+                                <option value="HP">PERSON WITH DISABILITY</option>
+                                <option value="DP">DUTY PASS</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="concessions">
+                    <label class="checkbox-option">
+                        <input type="checkbox"
+                               id="personWithDisabilityConcession">
+                        <span>Person With Disability Concession</span>
+                    </label>
+
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="flexibleDate">
+                        <span>Flexible With Date</span>
+                    </label>
+
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="railwayPassConcession">
+                        <span>Railway Pass Concession</span>
+                    </label>
+                </div>
+
+                <div id="statusMessage"
+                     class="status-message"
+                     role="status"
+                     aria-live="polite"></div>
+
+                <div class="button-row">
+                    <button type="submit"
+                            id="saveButton"
+                            class="primary-button">
+                        Save Journey
+                    </button>
+
+                    <button type="button"
+                            id="clearButton"
+                            class="secondary-button">
+                        Clear
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="booking.js"></script>
+</body>
+</html>
