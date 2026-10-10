@@ -1,5 +1,42 @@
 
+
 "use strict";
+
+// ఆటోఫిల్ నడుస్తున్నప్పుడు నిజమైన user interactions‌ను తాత్కాలికంగా నిరోధించాలి.
+let bookingAutofillRunning = false;
+
+const autofillBlockedEvents = [
+    "pointerdown",
+    "mousedown",
+    "mouseup",
+    "click",
+    "touchstart",
+    "touchend",
+    "keydown",
+    "keyup",
+    "contextmenu"
+];
+
+function blockUserInteractionDuringAutofill(event) {
+    if (!bookingAutofillRunning || !event.isTrusted) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+}
+
+for (const eventName of autofillBlockedEvents) {
+    document.addEventListener(
+        eventName,
+        blockUserInteractionDuringAutofill,
+        {
+            capture: true,
+            passive: false
+        }
+    );
+}
+
 
 // ======================================================
 // COMMON HELPERS
@@ -1070,12 +1107,27 @@ chrome.runtime.onMessage.addListener(
             return;
         }
 
+
         if (message.action === "FILL_BOOKING") {
-            fillBookingDetails(message.booking)
-                .then(result => {
+            if (bookingAutofillRunning) {
+                sendResponse({
+                    success: false,
+                    message: "Auto-Fill ఇప్పటికే నడుస్తోంది."
+                });
+
+                return;
+            }
+
+            bookingAutofillRunning = true;
+
+            (async () => {
+                try {
+                    const result = await fillBookingDetails(
+                        message.booking
+                    );
+
                     sendResponse(result);
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error(
                         "IRCTC booking autofill error:",
                         error
@@ -1087,9 +1139,14 @@ chrome.runtime.onMessage.addListener(
                             "Booking Autofillలో లోపం వచ్చింది. " +
                             "Consoleలో వివరాలను తనిఖీ చేయండి."
                     });
-                });
+                } finally {
+                    // విజయవంతమైనా, విఫలమైనా user interaction‌ను తిరిగి అనుమతించాలి.
+                    bookingAutofillRunning = false;
+                }
+            })();
 
             return true;
         }
+
     }
 );

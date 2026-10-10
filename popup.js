@@ -222,6 +222,7 @@ window.addEventListener("load", async function () {
         }
     });
 
+
     // Auto-fill booking details on IRCTC.
     fillBookingButton.addEventListener("click", async function () {
         const details = getBookingDetails();
@@ -243,11 +244,21 @@ window.addEventListener("load", async function () {
             return;
         }
 
-        await sendToIrctc({
-            action: "FILL_BOOKING",
-            booking: details
-        });
+        try {
+            // Popup మూసుకుపోయినా Background Service Worker పని కొనసాగించాలి.
+            chrome.runtime.sendMessage({
+                action: "START_BACKGROUND_AUTOFILL",
+                booking: details
+            });
+
+            // Auto-Fill ప్రారంభించడానికి message పంపిన వెంటనే popup మూసివేయాలి.
+            window.close();
+        } catch (error) {
+            console.error("Background Auto-Fill error:", error);
+            status.textContent = "Auto-Fill ప్రారంభించలేకపోయాం.";
+        }
     });
+
 
     // Send data to the IRCTC content script.
     async function sendToIrctc(message) {
