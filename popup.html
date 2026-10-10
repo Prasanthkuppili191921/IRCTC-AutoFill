@@ -7,255 +7,246 @@
     <title>IRCTC AutoFill</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            width: 340px;
-            padding: 14px;
-            box-sizing: border-box;
+            width: 380px;
+            min-height: 180px;
+            max-height: 580px;
+            margin: 0;
+            padding: 16px;
             color: #243653;
+            background: #f7f9fc;
+            font-family: Arial, sans-serif;
         }
 
-        h2 {
-            margin: 0 0 14px;
-            text-align: center;
-        }
-
-        h3 {
-            margin: 18px 0 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #ddd;
-            font-size: 15px;
-        }
-
-        label {
-            display: block;
-            margin: 9px 0 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #c8ced8;
-            border-radius: 4px;
-            font-size: 13px;
-            background: white;
-        }
-
-        .checkbox-row {
+        .header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            color: white;
+            background: #087e8b;
+            font-size: 21px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 19px;
+        }
+
+        .header p {
+            margin: 4px 0 0;
+            color: #718096;
             font-size: 12px;
         }
 
-        .checkbox-row input {
-            width: auto;
-            margin: 0;
-        }
-
-        button {
+        #fillNewForm {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             width: 100%;
-            padding: 10px;
-            margin-top: 12px;
+            min-height: 44px;
+            padding: 11px 14px;
             border: none;
-            border-radius: 4px;
-            background: #087e8b;
+            border-radius: 8px;
             color: white;
+            background: #087e8b;
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
         }
 
-        button:hover {
-            background: #066873;
+            #fillNewForm:hover {
+                background: #066873;
+            }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 22px 0 12px;
         }
 
-        #status {
+            .section-header h2 {
+                margin: 0;
+                font-size: 15px;
+            }
+
+        #recordCount {
+            color: #718096;
             font-size: 12px;
+        }
+
+        #records {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .record-card {
+            padding: 12px;
+            border: 1px solid #e0e6ef;
+            border-radius: 9px;
+            background: white;
+        }
+
+        .record-route {
+            margin: 0;
+            color: #243653;
+            font-size: 14px;
+            font-weight: 700;
             overflow-wrap: anywhere;
         }
 
-        .date-row {
-            position: relative;
+        .record-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
         }
 
-        .date-row #journeyDate {
-            width: 100%;
+        .record-tag {
+            padding: 4px 7px;
+            border-radius: 5px;
+            color: #4a5d75;
+            background: #eef2f7;
+            font-size: 11px;
         }
 
-        #journeyDatePicker {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-            left: 0;
-            bottom: 0;
+        .record-actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+            margin-top: 12px;
+        }
+
+            .record-actions button {
+                min-width: 0;
+                padding: 8px 4px;
+                border: 1px solid #d8e0eb;
+                border-radius: 6px;
+                background: white;
+                color: #34445b;
+                font-size: 12px;
+                cursor: pointer;
+            }
+
+                .record-actions button:hover {
+                    background: #f0f4f9;
+                }
+
+            .record-actions .autofill-button {
+                border-color: #087e8b;
+                color: white;
+                background: #087e8b;
+            }
+
+                .record-actions .autofill-button:hover {
+                    background: #066873;
+                }
+
+            .record-actions .delete-button {
+                color: #b42318;
+            }
+
+        .empty-state {
+            padding: 26px 14px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 9px;
+            background: white;
+            text-align: center;
+        }
+
+        .empty-icon {
+            margin-bottom: 9px;
+            color: #8190a5;
+            font-size: 27px;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 6px;
+            font-size: 14px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            color: #718096;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        #status {
+            margin: 12px 0 0;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+            #status:empty {
+                display: none;
+            }
+
+            #status.error {
+                color: #b42318;
+            }
+
+            #status.success {
+                color: #087e8b;
+            }
+
+        button:focus-visible {
+            outline: 2px solid #2878bd;
+            outline-offset: 2px;
         }
     </style>
 </head>
 
 <body>
-    <h2>IRCTC AutoFill</h2>
-
-    <h3>Login Details</h3>
-
-    <form id="loginForm">
-        <label for="username">IRCTC Username</label>
-        <input
-            id="username"
-            type="text"
-            autocomplete="username"
-            placeholder="Enter username"
-            required
-        >
-
-        <label for="password">IRCTC Password</label>
-        <input
-            id="password"
-            type="password"
-            autocomplete="current-password"
-            placeholder="Enter password"
-            required
-        >
-
-        <button type="submit">Save Login Details</button>
-    </form>
-
-    <button id="fillLogin" type="button">Auto-Fill Login</button>
-
-    <h3>Journey Details</h3>
-
-    <form id="bookingForm">
-        <label for="fromStation">From Station</label>
-        <input
-            id="fromStation"
-            type="text"
-            placeholder="e.g. SC"
-            autocomplete="off"
-            required
-        >
-
-        <label for="toStation">To Station</label>
-        <input
-            id="toStation"
-            type="text"
-            placeholder="e.g. MAS"
-            autocomplete="off"
-            required
-        >
-
-        <label for="journeyDate">Journey Date</label>
-
-        <div class="date-row">
-            <input
-                id="journeyDate"
-                name="journeyDate"
-                type="text"
-                placeholder="DD/MM/YYYY"
-                maxlength="10"
-                autocomplete="off"
-                required
-            >
-
-            <input
-                id="journeyDatePicker"
-                type="date"
-                aria-label="Choose journey date"
-                tabindex="-1"
-            >
+    <header class="header">
+        <div class="logo" aria-hidden="true">IR</div>
+        <div>
+            <h1>IRCTC AutoFill</h1>
+            <p>Manage your saved booking records</p>
         </div>
+    </header>
 
-        <label for="travelClass">Class</label>
-        <select id="travelClass">
-            <option value="">Keep current selection</option>
-            <option value="All Classes">All Classes</option>
-            <option value="1A">AC First Class (1A)</option>
-            <option value="2A">AC 2 Tier (2A)</option>
-            <option value="3A">AC 3 Tier (3A)</option>
-            <option value="3E">AC 3 Economy (3E)</option>
-            <option value="CC">AC Chair Car (CC)</option>
-            <option value="EC">Executive Chair Car (EC)</option>
-            <option value="SL">Sleeper (SL)</option>
-            <option value="2S">Second Sitting (2S)</option>
-        </select>
-
-        <label for="quota">Quota</label>
-        <select id="quota">
-            <option value="">Keep current selection</option>
-            <option value="GENERAL">GENERAL</option>
-            <option value="TATKAL">TATKAL</option>
-            <option value="PREMIUM TATKAL">PREMIUM TATKAL</option>
-            <option value="LADIES">LADIES</option>
-            <option value="LOWER BERTH/SR.CITIZEN">LOWER BERTH/SR.CITIZEN</option>
-            <option value="PERSON WITH DISABILITY">PERSON WITH DISABILITY</option>
-        </select>
-
-        <div class="checkbox-row">
-            <input id="flexibleDate" type="checkbox">
-            <label for="flexibleDate">Flexible With Date</label>
-        </div>
-
-        <h3>Passenger Details</h3>
-
-        <label for="passengerName">Passenger Name</label>
-        <input
-            id="passengerName"
-            type="text"
-            placeholder="Full name"
-            autocomplete="off"
-        >
-
-        <label for="passengerAge">Age</label>
-        <input
-            id="passengerAge"
-            type="number"
-            min="1"
-            max="125"
-            placeholder="Age"
-        >
-
-        <label for="passengerGender">Gender</label>
-        <select id="passengerGender">
-            <option value="">Keep current selection</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-            <option value="T">Transgender</option>
-        </select>
-
-        <h3>Preferences</h3>
-
-        <label for="berthPreference">Berth Preference</label>
-        <select id="berthPreference">
-            <option value="">No preference</option>
-            <option value="LOWER">Lower</option>
-            <option value="MIDDLE">Middle</option>
-            <option value="UPPER">Upper</option>
-            <option value="SIDE LOWER">Side Lower</option>
-            <option value="SIDE UPPER">Side Upper</option>
-        </select>
-
-        <label for="foodPreference">Food Preference</label>
-        <select id="foodPreference">
-            <option value="">No preference</option>
-            <option value="VEG">Vegetarian</option>
-            <option value="NONVEG">Non-Vegetarian</option>
-            <option value="JAIN">Jain Meal</option>
-        </select>
-
-        <button id="saveBooking" type="submit">
-            Save Booking Details
-        </button>
-    </form>
-
-    <button id="fillBooking" type="button">
-        Auto-Fill Booking Fields
+    <button id="fillNewForm" type="button">
+        <span aria-hidden="true">＋</span>
+        <span>Fill New Form</span>
     </button>
 
-    <p id="status" role="status"></p>
+    <section aria-labelledby="recordsHeading">
+        <div class="section-header">
+            <h2 id="recordsHeading">Saved Records</h2>
+            <span id="recordCount">0 records</span>
+        </div>
+
+        <div id="records" aria-live="polite">
+            <div class="empty-state">
+                <div class="empty-icon" aria-hidden="true">▤</div>
+                <h3>No saved records yet</h3>
+                <p>Select “Fill New Form” to create your first record.</p>
+            </div>
+        </div>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
 
     <script src="popup.js"></script>
 </body>

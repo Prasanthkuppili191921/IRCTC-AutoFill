@@ -1,304 +1,375 @@
 
-window.addEventListener("load", async function () {
+"use strict";
+
+const RECORDS_STORAGE_KEY = "bookingRecords";
+
+window.addEventListener("DOMContentLoaded", initializePopup);
+
+async function initializePopup() {
+    const fillNewFormButton = document.getElementById("fillNewForm");
+    const recordsContainer = document.getElementById("records");
+    const recordCount = document.getElementById("recordCount");
     const status = document.getElementById("status");
 
-    const loginForm = document.getElementById("loginForm");
-    const usernameInput = document.getElementById("username");
-    const passwordInput = document.getElementById("password");
-    const fillLoginButton = document.getElementById("fillLogin");
+    function showStatus(message, type = "") {
+        status.textContent = message;
+        status.className = type;
+    }
 
-    const bookingForm = document.getElementById("bookingForm");
-    const fillBookingButton = document.getElementById("fillBooking");
+    function clearStatus() {
+        showStatus("");
+    }
 
-    const journeyDateInput = document.getElementById("journeyDate");
-    const journeyDatePicker = document.getElementById("journeyDatePicker");
+    function getRecordBooking(record) {
+        // New records may keep journey details inside "booking".
+        // Also support flat records for compatibility.
+        return record?.booking &&
+            typeof record.booking === "object"
+            ? record.booking
+            : record || {};
+    }
 
-    const bookingFields = {
-        fromStation: document.getElementById("fromStation"),
-        toStation: document.getElementById("toStation"),
-        journeyDate: journeyDateInput,
-        travelClass: document.getElementById("travelClass"),
-        quota: document.getElementById("quota"),
-        flexibleDate: document.getElementById("flexibleDate"),
-        passengerName: document.getElementById("passengerName"),
-        passengerAge: document.getElementById("passengerAge"),
-        passengerGender: document.getElementById("passengerGender"),
-        berthPreference: document.getElementById("berthPreference"),
-        foodPreference: document.getElementById("foodPreference")
-    };
+    function getRecordId(record) {
+        return record?.id === undefined ||
+            record?.id === null
+            ? ""
+            : String(record.id);
+    }
 
-    const bookingStorageKeys = Object.keys(bookingFields);
+    function getRecordTitle(record) {
+        const booking = getRecordBooking(record);
 
-    // Validate DD/MM/YYYY and return ISO date.
-    function parseDisplayDate(value) {
-        const match = String(value || "").trim().match(
+        const from = String(booking.fromStation || "").trim();
+        const to = String(booking.toStation || "").trim();
+
+        if (from && to) {
+            return `${from} → ${to}`;
+        }
+
+        return String(record?.name || "Untitled Record");
+    }
+
+    function getRecordDate(record) {
+        const booking = getRecordBooking(record);
+        const value = String(booking.journeyDate || "").trim();
+
+        // Existing display format: DD/MM/YYYY.
+        const displayMatch = value.match(
             /^(\d{2})\/(\d{2})\/(\d{4})$/
         );
 
-        if (!match) {
-            return null;
+        if (displayMatch) {
+            return value;
         }
 
-        const day = Number(match[1]);
-        const month = Number(match[2]);
-        const year = Number(match[3]);
-
-        const date = new Date(year, month - 1, day);
-
-        if (
-            date.getFullYear() !== year ||
-            date.getMonth() !== month - 1 ||
-            date.getDate() !== day
-        ) {
-            return null;
-        }
-
-        return `${year}-${match[2]}-${match[1]}`;
-    }
-
-    // Convert ISO date to DD/MM/YYYY.
-    function isoDateToDisplay(value) {
-        const match = String(value || "").match(
+        // Support ISO format: YYYY-MM-DD.
+        const isoMatch = value.match(
             /^(\d{4})-(\d{2})-(\d{2})$/
         );
 
-        if (!match) {
-            return value || "";
+        if (isoMatch) {
+            return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
         }
 
-        return `${match[3]}/${match[2]}/${match[1]}`;
+        return value;
     }
 
-    // Open the native calendar when the date textbox receives focus.
-    // Browser policy may prevent automatic opening in some situations.
-    journeyDateInput.addEventListener("focus", function () {
-        const isoDate = parseDisplayDate(journeyDateInput.value);
+    function createTag(text) {
+        const tag = document.createElement("span");
+        tag.className = "record-tag";
+        tag.textContent = text;
+        return tag;
+    }
 
-        if (isoDate) {
-            journeyDatePicker.value = isoDate;
+    function createActionButton(label, action, className = "") {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.textContent = label;
+        button.dataset.action = action;
+
+        if (className) {
+            button.className = className;
         }
 
-        try {
-            if (typeof journeyDatePicker.showPicker === "function") {
-                journeyDatePicker.showPicker();
-            }
-        } catch (error) {
-            console.debug(
-                "Calendar could not open automatically:",
-                error
-            );
-        }
-    });
+        return button;
+    }
 
-    // Calendar selection -> DD/MM/YYYY.
-    journeyDatePicker.addEventListener("change", function () {
-        if (!this.value) {
+    function renderRecords(records) {
+        recordsContainer.replaceChildren();
+
+        recordCount.textContent =
+            `${records.length} ${records.length === 1 ? "record" : "records"}`;
+
+        if (records.length === 0) {
+            const emptyState = document.createElement("div");
+            emptyState.className = "empty-state";
+
+            const icon = document.createElement("div");
+            icon.className = "empty-icon";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = "▤";
+
+            const heading = document.createElement("h3");
+            heading.textContent = "No saved records yet";
+
+            const description = document.createElement("p");
+            description.textContent =
+                "Select “Fill New Form” to create your first record.";
+
+            emptyState.append(icon, heading, description);
+            recordsContainer.appendChild(emptyState);
             return;
         }
 
-        journeyDateInput.value = isoDateToDisplay(this.value);
+        for (const record of records) {
+            const recordId = getRecordId(record);
 
-        journeyDateInput.dispatchEvent(
-            new Event("input", { bubbles: true })
-        );
-
-        journeyDateInput.dispatchEvent(
-            new Event("change", { bubbles: true })
-        );
-
-        status.textContent = "";
-    });
-
-    // Load saved login and booking details.
-    try {
-        const keys = [
-            "irctcUsername",
-            "irctcPassword",
-            ...bookingStorageKeys
-        ];
-
-        const saved = await chrome.storage.local.get(keys);
-
-        usernameInput.value = saved.irctcUsername || "";
-        passwordInput.value = saved.irctcPassword || "";
-
-        for (const key of bookingStorageKeys) {
-            const element = bookingFields[key];
-
-            if (
-                saved[key] === undefined ||
-                saved[key] === null
-            ) {
+            // Records must have an ID for Edit/Delete/Auto-Fill.
+            if (!recordId) {
+                console.warn("Skipping record without an ID:", record);
                 continue;
             }
 
-            if (element.type === "checkbox") {
-                element.checked = Boolean(saved[key]);
-            } else if (key === "journeyDate") {
-                // Support older values saved as YYYY-MM-DD.
-                element.value =
-                    /^\d{4}-\d{2}-\d{2}$/.test(saved[key])
-                        ? isoDateToDisplay(saved[key])
-                        : saved[key];
-            } else {
-                element.value = saved[key];
+            const booking = getRecordBooking(record);
+
+            const card = document.createElement("article");
+            card.className = "record-card";
+            card.dataset.recordId = recordId;
+
+            const title = document.createElement("h3");
+            title.className = "record-route";
+            title.textContent = getRecordTitle(record);
+
+            const metadata = document.createElement("div");
+            metadata.className = "record-meta";
+
+            const journeyDate = getRecordDate(record);
+            const travelClass = String(
+                booking.travelClass || ""
+            ).trim();
+            const quota = String(booking.quota || "").trim();
+
+            if (journeyDate) {
+                metadata.appendChild(createTag(journeyDate));
             }
+
+            if (travelClass) {
+                metadata.appendChild(createTag(travelClass));
+            }
+
+            if (quota) {
+                metadata.appendChild(createTag(quota));
+            }
+
+            const actions = document.createElement("div");
+            actions.className = "record-actions";
+
+            actions.append(
+                createActionButton("Edit", "edit"),
+                createActionButton(
+                    "Delete",
+                    "delete",
+                    "delete-button"
+                ),
+                createActionButton(
+                    "Auto-Fill",
+                    "autofill",
+                    "autofill-button"
+                )
+            );
+
+            card.append(title, metadata, actions);
+            recordsContainer.appendChild(card);
         }
-    } catch (error) {
-        console.error("Load error:", error);
-        status.textContent = "Saved details load కాలేదు.";
+
+        // If all records were skipped, show an informative message.
+        if (!recordsContainer.children.length) {
+            const message = document.createElement("div");
+            message.className = "empty-state";
+
+            const heading = document.createElement("h3");
+            heading.textContent = "Records need an ID";
+
+            const description = document.createElement("p");
+            description.textContent =
+                "Saved records need a unique ID before they can be managed.";
+
+            message.append(heading, description);
+            recordsContainer.appendChild(message);
+        }
     }
 
-    // Save login details.
-    loginForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!username || !password) {
-            status.textContent =
-                "Username, Password నమోదు చేయండి.";
-            return;
-        }
-
+    async function loadRecords() {
         try {
-            await chrome.storage.local.set({
-                irctcUsername: username,
-                irctcPassword: password
-            });
+            const saved = await chrome.storage.local.get(
+                RECORDS_STORAGE_KEY
+            );
 
-            status.textContent = "Login details సేవ్ అయ్యాయి.";
+            const records = saved[RECORDS_STORAGE_KEY];
+
+            renderRecords(
+                Array.isArray(records) ? records : []
+            );
         } catch (error) {
-            console.error("Login save error:", error);
-            status.textContent = "Login details సేవ్ కాలేదు.";
+            console.error("Failed to load saved records:", error);
+            showStatus("Saved records could not be loaded.", "error");
         }
-    });
-
-    // Auto-fill login details on IRCTC.
-    fillLoginButton.addEventListener("click", async function () {
-        await sendToIrctc({
-            action: "FILL_LOGIN",
-            username: usernameInput.value.trim(),
-            password: passwordInput.value
-        });
-    });
-
-    // Read all booking fields.
-    function getBookingDetails() {
-        const details = {};
-
-        for (const key of bookingStorageKeys) {
-            const element = bookingFields[key];
-
-            details[key] = element.type === "checkbox"
-                ? element.checked
-                : element.value.trim();
-        }
-
-        return details;
     }
 
-    // Save booking details.
-    bookingForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const details = getBookingDetails();
-
-        if (!parseDisplayDate(details.journeyDate)) {
-            status.textContent =
-                "Journey Date DD/MM/YYYY formatలో నమోదు చేయండి. ఉదా: 20/10/2026";
-            journeyDateInput.focus();
-            return;
-        }
+    // Open the future full-page form in a new browser tab.
+    fillNewFormButton.addEventListener("click", async function () {
+        clearStatus();
 
         try {
-            await chrome.storage.local.set(details);
-
-            status.textContent = "Booking details సేవ్ అయ్యాయి.";
+            await chrome.tabs.create({
+                url: chrome.runtime.getURL("form.html")
+            });
         } catch (error) {
-            console.error("Booking save error:", error);
-            status.textContent = "Booking details సేవ్ కాలేదు.";
+            console.error("Could not open the form:", error);
+            showStatus("Could not open the new form.", "error");
         }
     });
 
+    // Handle Edit, Delete and Auto-Fill from each saved record.
+    recordsContainer.addEventListener("click", async function (event) {
+        const button = event.target.closest("button[data-action]");
 
-    // Auto-fill booking details on IRCTC.
-    fillBookingButton.addEventListener("click", async function () {
-        const details = getBookingDetails();
-
-        if (
-            !details.fromStation ||
-            !details.toStation ||
-            !details.journeyDate
-        ) {
-            status.textContent =
-                "From, To, Journey Date నమోదు చేయండి.";
+        if (!button) {
             return;
         }
 
-        if (!parseDisplayDate(details.journeyDate)) {
-            status.textContent =
-                "Journey Date DD/MM/YYYY formatలో నమోదు చేయండి.";
-            journeyDateInput.focus();
+        const card = button.closest("[data-record-id]");
+
+        if (!card) {
             return;
         }
 
-        try {
-            // Popup మూసుకుపోయినా Background Service Worker పని కొనసాగించాలి.
-            chrome.runtime.sendMessage({
-                action: "START_BACKGROUND_AUTOFILL",
-                booking: details
-            });
+        const recordId = card.dataset.recordId;
+        const action = button.dataset.action;
 
-            // Auto-Fill ప్రారంభించడానికి message పంపిన వెంటనే popup మూసివేయాలి.
-            window.close();
-        } catch (error) {
-            console.error("Background Auto-Fill error:", error);
-            status.textContent = "Auto-Fill ప్రారంభించలేకపోయాం.";
-        }
-    });
-
-
-    // Send data to the IRCTC content script.
-    async function sendToIrctc(message) {
-        status.textContent = "";
+        clearStatus();
+        button.disabled = true;
 
         try {
-            const [tab] = await chrome.tabs.query({
-                active: true,
-                currentWindow: true
-            });
+            const saved = await chrome.storage.local.get(
+                RECORDS_STORAGE_KEY
+            );
 
-            if (
-                !tab ||
-                !tab.id ||
-                !tab.url ||
-                !tab.url.startsWith("https://www.irctc.co.in/")
-            ) {
-                status.textContent =
-                    "ముందుగా IRCTC వెబ్‌సైట్‌ను తెరవండి.";
+            const records = Array.isArray(
+                saved[RECORDS_STORAGE_KEY]
+            )
+                ? saved[RECORDS_STORAGE_KEY]
+                : [];
+
+            const record = records.find(
+                item => getRecordId(item) === recordId
+            );
+
+            if (!record) {
+                showStatus(
+                    "Record not found. Refreshing the list.",
+                    "error"
+                );
+
+                await loadRecords();
                 return;
             }
 
-            const response = await chrome.tabs.sendMessage(
-                tab.id,
-                message
-            );
+            if (action === "edit") {
+                const editUrl = new URL(
+                    chrome.runtime.getURL("form.html")
+                );
 
-            if (response && response.success) {
-                status.textContent =
-                    response.message || "Auto-Fill పూర్తయింది.";
-            } else {
-                status.textContent =
-                    "కొన్ని fields నిండలేదు. IRCTC పేజీని తనిఖీ చేయండి.";
+                editUrl.searchParams.set("id", recordId);
 
-                console.warn("Auto-fill response:", response);
+                await chrome.tabs.create({
+                    url: editUrl.toString()
+                });
+
+                return;
+            }
+
+            if (action === "delete") {
+                const confirmed = window.confirm(
+                    `Delete "${getRecordTitle(record)}"?`
+                );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                const updatedRecords = records.filter(
+                    item => getRecordId(item) !== recordId
+                );
+
+                await chrome.storage.local.set({
+                    [RECORDS_STORAGE_KEY]: updatedRecords
+                });
+
+                showStatus("Record deleted.", "success");
+                await loadRecords();
+                return;
+            }
+
+            if (action === "autofill") {
+                const booking = getRecordBooking(record);
+
+                if (
+                    !String(booking.fromStation || "").trim() ||
+                    !String(booking.toStation || "").trim() ||
+                    !String(booking.journeyDate || "").trim()
+                ) {
+                    showStatus(
+                        "This record needs From, To and Journey Date.",
+                        "error"
+                    );
+                    return;
+                }
+
+                // Send the selected record's journey details
+                // to the existing background autofill pipeline.
+                const response = await chrome.runtime.sendMessage({
+                    action: "START_BACKGROUND_AUTOFILL",
+                    booking
+                });
+
+                if (response?.success) {
+                    showStatus(
+                        response.message || "Auto-Fill completed.",
+                        "success"
+                    );
+                } else {
+                    showStatus(
+                        response?.message ||
+                        "Auto-Fill could not be started. Open IRCTC and try again.",
+                        "error"
+                    );
+                }
             }
         } catch (error) {
+            console.error(`Record action failed (${action}):`, error);
 
-            status.textContent =
-                "Connection failed. Extension, IRCTC పేజీని Reload చేయండి.";
+            showStatus(
+                action === "autofill"
+                    ? "Auto-Fill failed. Check that an IRCTC tab is open and reload it if needed."
+                    : "The requested action could not be completed.",
+                "error"
+            );
+        } finally {
+            button.disabled = false;
         }
-    }
-});
+    });
+
+    // Refresh the list if another extension page changes records.
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (
+            areaName === "local" &&
+            changes[RECORDS_STORAGE_KEY]
+        ) {
+            loadRecords();
+        }
+    });
+
+    await loadRecords();
+}
