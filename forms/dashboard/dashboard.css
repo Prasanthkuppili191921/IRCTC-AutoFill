@@ -1,104 +1,190 @@
+
+/* ========================================
+   Global Styles
+======================================== */
+
 * {
 	box-sizing: border-box;
 }
 
 html {
+	width: 100%;
 	min-height: 100%;
-	background: #f2f5f9;
 }
 
 body {
 	width: 100%;
-	min-height: 0;
+	min-height: 100vh;
 	margin: 0;
-	padding: 24px 16px;
-	background: #f2f5f9;
-	color: #26364d;
-	font-family: Arial, sans-serif;
+	padding: 24px;
+	background: #f3f6fb;
+	font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ========================================
+   Dashboard Container
+======================================== */
+
 .dashboard-container {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
 	width: 100%;
-	max-width: 820px;
+	max-width: 1120px;
 	margin: 0 auto;
 	padding: 0;
 }
 
-	/* Imported booking page */
-	.dashboard-container .page-container {
-		display: block;
-		width: 100%;
-		min-height: 0;
-		margin: 0;
-		padding: 0;
-	}
+/* ========================================
+   Common Sections
+======================================== */
 
-	/* Preserve the existing booking card UI */
-	.dashboard-container .booking-card {
-		width: 100%;
-		max-width: 820px;
-		margin: 0 auto;
-	}
-
-	/* Hide the original Save Journey and Clear buttons */
-	.dashboard-container .button-row {
-		display: none !important;
-	}
-
-/* One centralized Save Details button */
-.dashboard-save-area {
+.dashboard-section {
 	width: 100%;
-	margin-top: 20px;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	background: #ffffff;
+	border: 1px solid #dce3ed;
+	border-radius: 16px;
 }
+
+/* ========================================
+   Login Frame
+======================================== */
+
+#loginFrame {
+	display: block;
+	width: 100%;
+	height: 320px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 16px;
+	background: #ffffff;
+}
+
+/* ========================================
+   Journey Frame
+======================================== */
+
+#bookingFrame {
+	display: block;
+	width: 100%;
+	height: 570px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 16px;
+	background: #ffffff;
+}
+
+/* ========================================
+   Save Details
+======================================== */
 
 #saveDetailsButton {
 	display: block;
 	width: 100%;
 	min-height: 46px;
-	padding: 12px 20px;
+	margin: 0;
+	padding: 13px 20px;
 	border: none;
-	border-radius: 6px;
-	background: #087e8b;
+	border-radius: 9px;
+	background: #2864e8;
 	color: #ffffff;
+	font-family: inherit;
 	font-size: 15px;
-	font-weight: 700;
+	font-weight: 600;
+	text-align: center;
 	cursor: pointer;
+	transition: background-color 0.2s ease;
 }
 
-	#saveDetailsButton:hover:not(:disabled) {
-		background: #066873;
+	#saveDetailsButton:hover {
+		background: #1d4ed8;
+	}
+
+	#saveDetailsButton:active {
+		background: #1e40af;
 	}
 
 	#saveDetailsButton:disabled {
-		cursor: wait;
-		opacity: 0.7;
+		opacity: 0.65;
+		cursor: not-allowed;
 	}
 
+/* ========================================
+   Status Message
+======================================== */
+
 #dashboardStatus {
-	margin: 12px 0 0;
+	margin: 0;
+	padding: 0;
 	font-size: 13px;
 	line-height: 1.5;
-	text-align: center;
+	overflow-wrap: anywhere;
 }
 
 	#dashboardStatus:empty {
 		display: none;
 	}
 
-	#dashboardStatus.success {
-		color: #087e8b;
-	}
-
 	#dashboardStatus.error {
-		color: #b42318;
+		color: #c62828;
 	}
 
-@media (max-width: 620px) {
+	#dashboardStatus.success {
+		color: #218838;
+	}
+
+/* ========================================
+   Responsive
+======================================== */
+
+@media (max-width: 768px) {
 	body {
-		padding: 12px;
+		padding: 16px;
 	}
 
-	.dashboard-container .booking-card {
-		padding: 22px 18px;
+	.dashboard-container {
+		gap: 16px;
+	}
+
+	#loginFrame {
+		height: 340px;
+	}
+
+	#bookingFrame {
+		height: 900px;
+	}
+}
+
+@media (max-width: 480px) {
+	body {
+		padding: 10px;
+	}
+
+	.dashboard-container {
+		gap: 12px;
+	}
+
+	.dashboard-section {
+		border-radius: 12px;
+	}
+
+	#loginFrame {
+		height: 340px;
+		border-radius: 12px;
+	}
+
+	#bookingFrame {
+		height: 1000px;
+		border-radius: 12px;
+	}
+
+	#saveDetailsButton {
+		min-height: 44px;
+		font-size: 14px;
 	}
 }

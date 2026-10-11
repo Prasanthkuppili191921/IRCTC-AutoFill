@@ -1,185 +1,365 @@
+﻿
 "use strict";
+
+const RECORDS_STORAGE_KEY = "bookingRecords";
 
 document.addEventListener("DOMContentLoaded", initializeDashboard);
 
+
 async function initializeDashboard() {
-    const sectionsContainer =
-        document.getElementById("sectionsContainer");
+    const loginFrame = document.getElementById("loginFrame");
+    const bookingFrame = document.getElementById("bookingFrame");
+    const saveButton = document.getElementById("saveDetailsButton");
+    const statusElement = document.getElementById("dashboardStatus");
 
-    const dashboardStatus =
-        document.getElementById("dashboardStatus");
+    const editingRecordId =
+        new URLSearchParams(window.location.search).get("id");
 
-    if (!sectionsContainer || !dashboardStatus) {
-        console.error("Dashboard elements not found.");
-        return;
-    }
+    let isSaving = false;
+    let previousBookingFrameHeight = "";
 
     function showStatus(message, type = "") {
-        dashboardStatus.textContent = message;
-        dashboardStatus.className = type;
+        statusElement.textContent = message;
+        statusElement.className = type;
     }
 
-    function getExtensionUrl(path) {
-        return chrome.runtime.getURL(path);
+    // Calendar popup messages from booking iframe.
+    window.addEventListener("message", function (event) {
+        if (event.origin !== window.location.origin) {
+            return;
+        }
+
+        if (event.source !== bookingFrame.contentWindow) {
+            return;
+        }
+
+        if (event.data?.type === "IRCTC_CALENDAR_OPEN") {
+            if (previousBookingFrameHeight === "") {
+                previousBookingFrameHeight =
+                    bookingFrame.style.height;
+            }
+
+            bookingFrame.style.height = "760px";
+            bookingFrame.style.overflow = "visible";
+        }
+
+        if (event.data?.type === "IRCTC_CALENDAR_CLOSE") {
+            bookingFrame.style.height =
+                previousBookingFrameHeight;
+
+            previousBookingFrameHeight = "";
+        }
+    });
+
+    function waitForFrame(frame) {
+        if (frame.contentDocument?.readyState === "complete") {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            frame.addEventListener("load", resolve, { once: true });
+
+            frame.addEventListener(
+                "error",
+                () => reject(new Error("Unable to load a form.")),
+                { once: true }
+            );
+        });
+    }
+
+    function getFrameDocument(frame) {
+        const doc = frame.contentDocument;
+
+        if (!doc) {
+            throw new Error("Unable to access a form.");
+        }
+
+        return doc;
     }
 
     try {
-        const bookingUrl = getExtensionUrl(
-            "forms/booking/booking.html"
-        );
+        await Promise.all([
+            waitForFrame(loginFrame),
+            waitForFrame(bookingFrame)
+        ]);
 
-        const response = await fetch(bookingUrl);
+        const loginDoc = getFrameDocument(loginFrame);
+        const bookingDoc = getFrameDocument(bookingFrame);
 
-        if (!response.ok) {
-            throw new Error(
-                `Unable to load booking.html: HTTP ${ response.status } `
-            );
+        if (
+            !loginDoc.getElementById("username") ||
+            !loginDoc.getElementById("password")
+        ) {
+            throw new Error("Login form fields were not found.");
         }
 
-        const html = await response.text();
-
-        const parsedDocument = new DOMParser().parseFromString(
-            html,
-            "text/html"
-        );
-
-        const bookingPage =
-            parsedDocument.querySelector(".page-container");
-
-        if (!bookingPage) {
-            throw new Error(
-                "The .page-container element was not found in booking.html."
-            );
+        if (
+            !bookingDoc.getElementById("fromStation") ||
+            !bookingDoc.getElementById("toStation") ||
+            !bookingDoc.getElementById("journeyDate")
+        ) {
+            throw new Error("Journey form fields were not found.");
         }
 
-        // Insert the complete booking UI, not only the form.
-        sectionsContainer.replaceChildren(
-            document.importNode(bookingPage, true)
-        );
-
-        const bookingCard =
-            sectionsContainer.querySelector(".booking-card");
-
-        const bookingForm =
-            sectionsContainer.querySelector("#bookingForm");
-
-        if (!bookingCard || !bookingForm) {
-            throw new Error(
-                "The booking card or booking form was not found."
-            );
+        if (editingRecordId) {
+            await loadExistingRecord(editingRecordId);
         }
 
-        // Add the one centralized Save Details button
-        // at the end of the existing booking card.
-        const saveArea = document.createElement("div");
-        saveArea.className = "dashboard-save-area";
-
-        const saveButton = document.createElement("button");
-        saveButton.id = "saveDetailsButton";
-        saveButton.type = "button";
-        saveButton.textContent = "Save Details";
-
-        saveArea.appendChild(saveButton);
-        bookingCard.appendChild(saveArea);
-
-        // Load the existing booking.js after its HTML exists.
-        await loadScript(
-            getExtensionUrl("forms/booking/booking.js")
-        );
-
-        // Use the existing booking.js save and validation logic.
-        saveButton.addEventListener("click", () => {
-            const form = document.getElementById("bookingForm");
-
-            if (!form) {
-                showStatus("Booking form not found.", "error");
-                return;
-            }
-
-            saveButton.disabled = true;
-            saveButton.textContent = "Saving...";
-            showStatus("");
-
-            form.requestSubmit();
-
-            // Existing booking.js updates statusMessage.
-            const formStatus =
-                document.getElementById("statusMessage");
-
-            let attempts = 0;
-
-            const timer = window.setInterval(() => {
-                attempts++;
-
-                const message =
-                    formStatus?.textContent?.trim() || "";
-
-                const className =
-                    formStatus?.className || "";
-
-                if (
-                    message &&
-                    (
-                        className.includes("success") ||
-                        className.includes("error")
-                    )
-                ) {
-                    showStatus(
-                        message,
-                        className.includes("success")
-                            ? "success"
-                            : "error"
-                    );
-
-                    saveButton.disabled = false;
-                    saveButton.textContent = "Save Details";
-                    window.clearInterval(timer);
-                    return;
-                }
-
-                if (attempts >= 40) {
-                    saveButton.disabled = false;
-                    saveButton.textContent = "Save Details";
-                    window.clearInterval(timer);
-                }
-            }, 250);
-        });
-
-
-        const isEditMode = new URLSearchParams(
-            window.location.search
-        ).has("id");
-
-        document.title = isEditMode
-            ? "Edit - IRCTC AutoFill Dashboard"
-            : "IRCTC AutoFill Dashboard";
-
-
-        console.log(
-            "Dashboard initialized. Journey Details loaded successfully."
-        );
+        saveButton.addEventListener("click", saveAllDetails);
 
     } catch (error) {
         console.error("Dashboard initialization failed:", error);
+        showStatus(error.message, "error");
+        saveButton.disabled = true;
+    }
 
-        showStatus(
-            "Unable to load Journey Details. Check the extension files.",
-            "error"
+    async function loadExistingRecord(recordId) {
+        const result = await chrome.storage.local.get(
+            RECORDS_STORAGE_KEY
         );
+
+        const records = Array.isArray(result[RECORDS_STORAGE_KEY])
+            ? result[RECORDS_STORAGE_KEY]
+            : [];
+
+        const record = records.find(item => item.id === recordId);
+
+        if (!record) {
+            throw new Error("Saved record was not found.");
+        }
+
+        const loginDoc = getFrameDocument(loginFrame);
+        const bookingDoc = getFrameDocument(bookingFrame);
+
+        const login = record.login || {};
+        const booking = record.booking || record;
+
+        loginDoc.getElementById("username").value =
+            login.username || "";
+
+        loginDoc.getElementById("password").value =
+            login.password || "";
+
+        bookingDoc.getElementById("fromStation").value =
+            booking.fromStation || "";
+
+        bookingDoc.getElementById("toStation").value =
+            booking.toStation || "";
+
+        const dateInput = bookingDoc.getElementById("journeyDate");
+        dateInput.value = normalizeDate(booking.journeyDate);
+
+        bookingDoc.getElementById("travelClass").value =
+            booking.travelClass ?? "";
+
+        bookingDoc.getElementById("quota").value =
+            booking.quota || "GN";
+
+        bookingDoc.getElementById("flexibleDate").checked =
+            Boolean(booking.flexibleDate);
+
+        bookingDoc.getElementById(
+            "personWithDisabilityConcession"
+        ).checked = Boolean(
+            booking.personWithDisabilityConcession
+        );
+
+        bookingDoc.getElementById("railwayPassConcession").checked =
+            Boolean(booking.railwayPassConcession);
+
+        dateInput.dispatchEvent(
+            new Event("input", { bubbles: true })
+        );
+    }
+
+    async function saveAllDetails() {
+        if (isSaving) {
+            return;
+        }
+
+        isSaving = true;
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+        showStatus("");
+
+        try {
+            const loginDoc = getFrameDocument(loginFrame);
+            const bookingDoc = getFrameDocument(bookingFrame);
+
+            const username =
+                loginDoc.getElementById("username").value.trim();
+
+            const password =
+                loginDoc.getElementById("password").value;
+
+            if (!username || !password) {
+                throw new Error(
+                    "Enter the User Name and Password."
+                );
+            }
+
+            const fromStation =
+                bookingDoc.getElementById("fromStation").value.trim();
+
+            const toStation =
+                bookingDoc.getElementById("toStation").value.trim();
+
+            const journeyDate =
+                bookingDoc.getElementById("journeyDate").value.trim();
+
+            if (!fromStation || !toStation) {
+                throw new Error("Enter both From and To stations.");
+            }
+
+            if (
+                fromStation.toUpperCase() === toStation.toUpperCase()
+            ) {
+                throw new Error(
+                    "From and To stations must be different."
+                );
+            }
+
+            if (!isValidDate(journeyDate)) {
+                throw new Error(
+                    "Enter a valid Journey Date in DD/MM/YYYY format."
+                );
+            }
+
+            const booking = {
+                fromStation: fromStation.toUpperCase(),
+                toStation: toStation.toUpperCase(),
+                journeyDate,
+                journeyDateKey: getDateKey(journeyDate),
+                travelClass:
+                    bookingDoc.getElementById("travelClass").value,
+                quota:
+                    bookingDoc.getElementById("quota").value,
+                flexibleDate:
+                    bookingDoc.getElementById("flexibleDate").checked,
+                personWithDisabilityConcession:
+                    bookingDoc.getElementById(
+                        "personWithDisabilityConcession"
+                    ).checked,
+                railwayPassConcession:
+                    bookingDoc.getElementById(
+                        "railwayPassConcession"
+                    ).checked
+            };
+
+            const result = await chrome.storage.local.get(
+                RECORDS_STORAGE_KEY
+            );
+
+            const records = Array.isArray(result[RECORDS_STORAGE_KEY])
+                ? result[RECORDS_STORAGE_KEY]
+                : [];
+
+            const now = new Date().toISOString();
+
+            const name =
+                `${getStationCode(fromStation)} → ` +
+                `${getStationCode(toStation)}`;
+
+            const login = { username, password };
+
+            if (editingRecordId) {
+                const index = records.findIndex(
+                    item => item.id === editingRecordId
+                );
+
+                if (index === -1) {
+                    throw new Error("Saved record no longer exists.");
+                }
+
+                records[index] = {
+                    ...records[index],
+                    name,
+                    login,
+                    booking,
+                    updatedAt: now
+                };
+            } else {
+                records.push({
+                    id: crypto.randomUUID(),
+                    name,
+                    login,
+                    booking,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            }
+
+            await chrome.storage.local.set({
+                [RECORDS_STORAGE_KEY]: records
+            });
+
+            showStatus(
+                editingRecordId
+                    ? "Login and Journey details updated."
+                    : "Login and Journey details saved.",
+                "success"
+            );
+
+            saveButton.textContent = "Saved";
+
+            window.setTimeout(() => window.close(), 500);
+
+        } catch (error) {
+            console.error("Save Details failed:", error);
+            showStatus(
+                error.message || "Unable to save details.",
+                "error"
+            );
+            saveButton.textContent = "Save Details";
+        } finally {
+            isSaving = false;
+            saveButton.disabled = false;
+        }
     }
 }
 
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement("script");
 
-        script.src = src;
+function normalizeDate(value) {
+    if (typeof value !== "string") return "";
 
-        script.onload = () => resolve();
-        script.onerror = () => {
-            reject(new Error(`Unable to load script: ${ src } `));
-        };
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        return isValidDate(value) ? value : "";
+    }
 
-        document.body.appendChild(script);
-    });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-");
+        const formatted = `${day}/${month}/${year}`;
+        return isValidDate(formatted) ? formatted : "";
+    }
+
+    return "";
+}
+
+function isValidDate(value) {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (!match) return false;
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+
+    return date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day;
+}
+
+function getDateKey(value) {
+    const [day, month, year] = value.split("/");
+    return `${year}-${month}-${day}`;
+}
+
+function getStationCode(stationName) {
+    const match = String(stationName || "").match(
+        /-\s*([A-Z0-9]{2,5})\s*\(/i
+    );
+
+    return match
+        ? match[1].toUpperCase()
+        : String(stationName || "").trim().toUpperCase();
 }

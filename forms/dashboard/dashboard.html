@@ -1,25 +1,35 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IRCTC AutoFill Dashboard</title>
-
-    <!-- Existing booking styles -->
-    <link rel="stylesheet" href="../booking/booking.css">
-
-    <!-- Dashboard overrides -->
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
     <main class="dashboard-container">
-        <div id="sectionsContainer">
-            <p id="loadingMessage">Loading Journey Details...</p>
-        </div>
 
-        <p id="dashboardStatus"
-           role="status"
-           aria-live="polite"></p>
+        <section class="dashboard-section login-section">
+            <iframe id="loginFrame"
+                    src="../login/login.html"
+                    title="Login Details">
+            </iframe>
+        </section>
+
+        <section class="dashboard-section booking-section">
+            <iframe id="bookingFrame"
+                    src="../booking/booking.html?embedded=1"
+                    title="Journey Details">
+            </iframe>
+        </section>
+
+        <button type="button" id="saveDetailsButton">
+            Save Details
+        </button>
+
+        <p id="dashboardStatus" role="status" aria-live="polite"></p>
+
     </main>
 
     <script src="dashboard.js"></script>

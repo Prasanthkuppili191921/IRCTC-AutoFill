@@ -43,15 +43,38 @@ if (document.readyState === "loading") {
     initialize();
 }
 
-function initialize() {
-    form.addEventListener("submit", handleSave);
-    clearButton.addEventListener("click", handleClear);
 
+
+function initialize() {
+    const isEmbedded =
+        new URLSearchParams(window.location.search).get("embedded") === "1";
+
+    // Embedded mode: buttons may not exist in booking.html.
+    if (isEmbedded) {
+        if (saveButton) {
+            saveButton.hidden = true;
+        }
+
+        if (clearButton) {
+            clearButton.hidden = true;
+        }
+    } else {
+        if (form) {
+            form.addEventListener("submit", handleSave);
+        }
+
+        if (clearButton) {
+            clearButton.addEventListener("click", handleClear);
+        }
+    }
+
+    // Date input events
     journeyDateInput.addEventListener("click", openCalendar);
     journeyDateInput.addEventListener("keydown", handleDateKeydown);
     journeyDateInput.addEventListener("input", handleDateTyping);
     journeyDateInput.addEventListener("blur", normalizeManualDateOnBlur);
 
+    // Calendar controls
     openCalendarButton.addEventListener("click", openCalendar);
     previousMonthButton.addEventListener("click", () => changeMonth(-1));
     nextMonthButton.addEventListener("click", () => changeMonth(1));
@@ -61,6 +84,8 @@ function initialize() {
     document.addEventListener("pointerdown", handleOutsideClick);
     document.addEventListener("keydown", handleDocumentKeydown);
 
+    openCalendarButton.setAttribute("aria-expanded", "false");
+
     renderCalendar();
 
     if (editingRecordId) {
@@ -68,9 +93,12 @@ function initialize() {
     }
 }
 
+
+
 // --------------------------------------------------
 // Custom calendar
 // --------------------------------------------------
+
 
 function openCalendar() {
     if (calendarPopup.hidden) {
@@ -91,12 +119,29 @@ function openCalendar() {
     openCalendarButton.setAttribute("aria-expanded", "true");
 
     renderCalendar();
+
+    // Parent dashboard ki calendar open ayindani teliyajeyali.
+    if (window.parent !== window) {
+        window.parent.postMessage(
+            { type: "IRCTC_CALENDAR_OPEN" },
+            window.location.origin
+        );
+    }
 }
 
 function closeCalendar() {
     calendarPopup.hidden = true;
     openCalendarButton.setAttribute("aria-expanded", "false");
+
+    // Parent dashboard ki calendar close ayindani teliyajeyali.
+    if (window.parent !== window) {
+        window.parent.postMessage(
+            { type: "IRCTC_CALENDAR_CLOSE" },
+            window.location.origin
+        );
+    }
 }
+
 
 function handleDateKeydown(event) {
     if (event.key === "Enter" || event.key === "ArrowDown") {

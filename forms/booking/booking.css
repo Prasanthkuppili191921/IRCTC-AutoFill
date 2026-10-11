@@ -1,43 +1,72 @@
-﻿* {
+﻿
+/* ========================================
+   Global Styles
+======================================== */
+
+* {
     box-sizing: border-box;
 }
 
 html {
-    min-height: 100%;
-    background: #f2f5f9;
+    width: 100%;
+    min-height: 0;
+    background: #ffffff;
 }
 
 body {
-    min-height: 100vh;
+    width: 100%;
+    min-height: 0;
+    height: auto;
     margin: 0;
-    padding: 30px 20px;
-    background: #f2f5f9;
+    padding: 0;
+    background: #ffffff;
     color: #26364d;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
+
+/* ========================================
+   Page Container
+======================================== */
 
 .page-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    display: block;
     width: 100%;
-    min-height: calc(100vh - 60px);
-    margin: 0 auto;
+    max-width: none;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
 }
+
+/* ========================================
+   Journey Details Card
+======================================== */
 
 .booking-card {
+    position: relative;
     width: 100%;
-    max-width: 820px;
-    padding: 30px 32px;
-    background: #fff;
-    border: 1px solid #e1e7ef;
-    border-radius: 14px;
-    box-shadow: 0 5px 22px rgba(30, 50, 80, 0.08);
+    max-width: none;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0;
+    padding: 24px 32px;
+    background: #ffffff;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
 }
 
+/* ========================================
+   Page Header
+======================================== */
+
 .page-header {
-    margin: 0 0 28px;
+    margin: 0 0 24px;
 }
 
     .page-header h1 {
@@ -57,10 +86,15 @@ body {
         text-align: center;
     }
 
+/* ========================================
+   Station Fields
+======================================== */
+
 .station-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
+    width: 100%;
     margin-bottom: 22px;
 }
 
@@ -68,6 +102,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px 24px;
+    width: 100%;
 }
 
 .field-group {
@@ -91,6 +126,10 @@ body {
     grid-column: 1;
 }
 
+/* ========================================
+   Input and Select Containers
+======================================== */
+
 .input-with-icon,
 .select-with-icon {
     display: flex;
@@ -103,7 +142,7 @@ body {
     padding: 0 12px;
     border: 1px solid #c3ccd8;
     border-radius: 5px;
-    background: #fff;
+    background: #ffffff;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -112,6 +151,10 @@ body {
         border-color: #2878bd;
         box-shadow: 0 0 0 3px rgba(40, 120, 189, 0.12);
     }
+
+/* ========================================
+   Field Icons
+======================================== */
 
 .field-icon {
     display: inline-flex;
@@ -131,6 +174,10 @@ body {
 .location-icon {
     font-size: 15px;
 }
+
+/* ========================================
+   Text Inputs
+======================================== */
 
 .input-with-icon input[type="text"] {
     display: block;
@@ -160,6 +207,10 @@ body {
         box-shadow: none;
     }
 
+/* ========================================
+   Select Inputs
+======================================== */
+
 .select-with-icon select {
     display: block;
     flex: 1 1 auto;
@@ -185,22 +236,31 @@ body {
         box-shadow: none;
     }
 
-/* Date field and left-side calendar icon */
+/* ========================================
+   Date Field and Calendar Icon
+======================================== */
 
 .date-field-group {
     position: relative;
+    z-index: 10000;
+    min-width: 0;
+    overflow: visible !important;
 }
 
 .date-input-wrapper {
     position: relative;
-    z-index: 2;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
     gap: 9px;
+    overflow: visible !important;
 }
 
 .calendar-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    order: 1;
     width: 28px;
     height: 34px;
     flex: 0 0 28px;
@@ -233,19 +293,23 @@ body {
     order: 2;
 }
 
-.calendar-button {
-    order: 1;
-}
+/* ========================================
+   Calendar Popup
+   Independent floating overlay
+======================================== */
 
-/* Custom calendar popup directly below the date textbox */
-
-/* Calendar directly below the date textbox */
 .calendar-popup {
-    top: calc(100% + 1px);
+    position: absolute !important;
+    top: calc(100% + 4px);
     left: 0;
-    z-index: 1000;
-    width: 100%;
-    min-width: 260px;
+    z-index: 2147483647 !important;
+    display: block;
+    width: 300px;
+    min-width: 280px;
+    max-width: 320px;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin: 0;
     padding: 12px;
     border: 1px solid #d4dce7;
@@ -254,10 +318,13 @@ body {
     box-shadow: 0 8px 24px rgba(25, 45, 75, 0.18);
 }
 
-.calendar-popup[hidden] {
-    display: none !important;
-}
+    .calendar-popup[hidden] {
+        display: none !important;
+    }
 
+/* ========================================
+   Calendar Header
+======================================== */
 
 .calendar-header {
     display: grid;
@@ -299,12 +366,17 @@ body {
     cursor: default;
 }
 
+/* ========================================
+   Calendar Days
+======================================== */
+
 .calendar-weekdays,
 .calendar-days {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 3px;
     text-align: center;
+    overflow: visible;
 }
 
 .calendar-weekdays {
@@ -352,9 +424,13 @@ body {
     .calendar-day.selected {
         border-color: #216bd2;
         background: #216bd2;
-        color: #fff;
+        color: #ffffff;
         font-weight: 700;
     }
+
+/* ========================================
+   Calendar Footer
+======================================== */
 
 .calendar-footer {
     display: flex;
@@ -380,6 +456,10 @@ body {
             background: #edf4ff;
         }
 
+/* ========================================
+   Field Help Text
+======================================== */
+
 .field-group small {
     margin: 0;
     color: #718096;
@@ -387,7 +467,9 @@ body {
     line-height: 1.4;
 }
 
-/* Concessions */
+/* ========================================
+   Concessions
+======================================== */
 
 .concessions {
     display: grid;
@@ -422,7 +504,9 @@ body {
         cursor: pointer;
     }
 
-/* Save and Clear */
+/* ========================================
+   Buttons for Standalone Booking Page
+======================================== */
 
 .button-row {
     display: flex;
@@ -455,7 +539,7 @@ body {
 .primary-button {
     flex: 1 1 auto;
     background: #216bd2;
-    color: #fff;
+    color: #ffffff;
 }
 
     .primary-button:hover:not(:disabled) {
@@ -473,7 +557,9 @@ body {
         background: #d1d5db;
     }
 
-/* Messages */
+/* ========================================
+   Status Messages
+======================================== */
 
 .status-message {
     display: none;
@@ -499,6 +585,10 @@ body {
         color: #991b1b;
     }
 
+/* ========================================
+   Focus Styles
+======================================== */
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
@@ -506,16 +596,13 @@ select:focus-visible {
     outline-offset: 2px;
 }
 
-/* Responsive */
+/* ========================================
+   Responsive Layout
+======================================== */
 
 @media (max-width: 620px) {
-    body {
-        padding: 16px 12px;
-    }
-
     .booking-card {
         padding: 22px 18px;
-        border-radius: 10px;
     }
 
     .page-header {
@@ -569,7 +656,9 @@ select:focus-visible {
         }
 
     .calendar-popup {
+        width: 280px;
         min-width: 0;
+        max-width: min(320px, calc(100vw - 36px));
         padding: 9px;
     }
 
@@ -591,5 +680,83 @@ select:focus-visible {
 
     .checkbox-option {
         font-size: 14px;
+    }
+}
+
+
+/* ===== Fix Journey Form Scrolling ===== */
+
+html,
+body {
+    width: 100%;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.page-container,
+.booking-card {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+}
+
+/* ===== Date Field ===== */
+
+.date-field-group {
+    position: relative !important;
+    min-width: 0;
+    overflow: visible !important;
+    z-index: 1000;
+}
+
+.date-input-wrapper {
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 1001;
+}
+
+/* ===== Independent Calendar Popup ===== */
+
+.calendar-popup {
+    position: absolute !important;
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    width: 300px !important;
+    min-width: 280px !important;
+    max-width: min(320px, calc(100vw - 32px)) !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    border: 1px solid #d4dce7 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    box-sizing: border-box !important;
+}
+
+    .calendar-popup[hidden] {
+        display: none !important;
+    }
+
+/* ===== Calendar Grid ===== */
+
+.calendar-weekdays,
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+    text-align: center;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 620px) {
+    .calendar-popup {
+        width: min(300px, calc(100vw - 32px)) !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 32px) !important;
     }
 }
