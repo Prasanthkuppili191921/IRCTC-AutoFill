@@ -35,7 +35,13 @@ displayedMonth = new Date(
     1
 );
 
-document.addEventListener("DOMContentLoaded", initialize);
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize, {
+        once: true
+    });
+} else {
+    initialize();
+}
 
 function initialize() {
     form.addEventListener("submit", handleSave);
@@ -378,8 +384,21 @@ async function getRecords() {
         : [];
 }
 
+function getStationCode(stationName) {
+    const match = String(stationName || "").match(
+        /-\s*([A-Z0-9]{2,5})\s*\(/i
+    );
+
+    return match
+        ? match[1].toUpperCase()
+        : String(stationName || "").trim().toUpperCase();
+}
+
 function getRecordName(booking) {
-    return `${booking.fromStation} → ${booking.toStation}`;
+    const fromCode = getStationCode(booking.fromStation);
+    const toCode = getStationCode(booking.toStation);
+
+    return `${fromCode} → ${toCode}`;
 }
 
 function getBookingFromForm() {

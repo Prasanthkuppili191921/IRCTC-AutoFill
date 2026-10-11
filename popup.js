@@ -24,10 +24,10 @@ function initializePopup() {
 // Open the booking form in a new tab.
 function openNewForm() {
     const url = chrome.runtime.getURL(
-        "forms/booking/booking.html"
+        "forms/dashboard/dashboard.html"
     );
 
-    chrome.tabs.create({ url }, error => {
+    chrome.tabs.create({ url }, () => {
         if (chrome.runtime.lastError) {
             showStatus(
                 chrome.runtime.lastError.message,
@@ -220,6 +220,7 @@ function createActionButton(label, className, handler) {
 }
 
 // Open the selected record in edit mode.
+
 function editRecord(recordId) {
     if (!recordId) {
         showStatus("The selected record has no valid ID.", "error");
@@ -227,7 +228,7 @@ function editRecord(recordId) {
     }
 
     const url =
-        chrome.runtime.getURL("forms/booking/booking.html") +
+        chrome.runtime.getURL("forms/dashboard/dashboard.html") +
         "?id=" +
         encodeURIComponent(recordId);
 
@@ -240,6 +241,7 @@ function editRecord(recordId) {
         }
     });
 }
+
 
 // Delete the selected record.
 async function deleteRecord(recordId) {
