@@ -19,9 +19,21 @@ async function initializeDashboard() {
     let previousBookingFrameHeight = "";
 
     function showStatus(message, type = "") {
-        statusElement.textContent = message;
+        statusElement.textContent = "";
         statusElement.className = type;
+
+        if (!message) {
+            return;
+        }
+
+        if (type === "error") {
+            IRCTCToast.show(message, "error");
+            return;
+        }
+
+        statusElement.textContent = message;
     }
+
 
     // Calendar popup messages from booking iframe.
     window.addEventListener("message", function (event) {

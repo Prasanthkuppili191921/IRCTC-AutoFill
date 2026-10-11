@@ -1,8 +1,8 @@
-
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("loginForm");
+    const usernameInput = document.getElementById("username");
     const passwordInput = document.getElementById("password");
     const togglePasswordButton =
         document.getElementById("togglePassword");
@@ -31,7 +31,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         loginStatus.textContent = "";
 
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username) {
+            IRCTCToast.show("Please enter your username.", "error");
+            usernameInput.focus();
+            return;
+        }
+
+        if (!password.trim()) {
+            IRCTCToast.show("Please enter your password.", "error");
+            passwordInput.focus();
+            return;
+        }
+
         if (!loginForm.checkValidity()) {
+            IRCTCToast.show(
+                "Please check the entered details.",
+                "error"
+            );
             loginForm.reportValidity();
             return;
         }
