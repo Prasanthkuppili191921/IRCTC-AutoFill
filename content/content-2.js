@@ -235,10 +235,15 @@ async function fillBookingDetails(booking) {
 
     if (savedTrainNumber) {
         const trainCheckResult =
-            await checkSavedTrainOnPage(savedTrainNumber);
+            await checkSavedTrainOnPage(
+                savedTrainNumber,
+                booking.travelClass,
+                booking.journeyDate
+            );
 
         addResult("Saved Train Check", trainCheckResult);
-    } else {
+    }
+    else {
         addResult("Saved Train Check", {
             success: false,
             message: "Saved Train Number కనిపించలేదు."
@@ -289,52 +294,468 @@ async function clickSearchTrains() {
 }
 
 
+
+async function selectTrainJourneyDate(trainCard, journeyDate) {
+    if (!trainCard || !journeyDate) {
+        return {
+            success: false,
+            message: "Train record లేదా journey date లేదు."
+        };
+    }
+
+    const value = String(journeyDate).trim();
+
+    let day;
+    let month;
+    let year;
+
+    // DD/MM/YYYY లేదా DD-MM-YYYY
+    let match = value.match(
+        /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
+    );
+
+    if (match) {
+        day = Number(match[1]);
+        month = Number(match[2]);
+        year = Number(match[3]);
+    } else {
+        // YYYY-MM-DD
+        match = value.match(
+            /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+        );
+
+        if (match) {
+            year = Number(match[1]);
+            month = Number(match[2]);
+            day = Number(match[3]);
+        } else {
+            const parsed = new Date(value);
+
+            if (Number.isNaN(parsed.getTime())) {
+                return {
+                    success: false,
+                    message:
+                        `Journey date format గుర్తించబడలేదు: ${value}`
+                };
+            }
+
+            day = parsed.getDate();
+            month = parsed.getMonth() + 1;
+            year = parsed.getFullYear();
+        }
+    }
+
+    if (
+        month < 1 ||
+        month > 12 ||
+        day < 1 ||
+        day > 31
+    ) {
+        return {
+            success: false,
+            message: `Invalid journey date: ${value}`
+        };
+    }
+
+    const monthNames = [
+        "JAN", "FEB", "MAR", "APR",
+        "MAY", "JUN", "JUL", "AUG",
+        "SEP", "OCT", "NOV", "DEC"
+    ];
+
+    const targetMonth = monthNames[month - 1];
+
+    const targetDateText =
+        `${day} ${targetMonth}`;
+
+    // Class selection తర్వాత date cards render అయ్యేవరకు వేచి ఉండాలి.
+    let dateCards = [];
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+        dateCards = Array.from(
+            trainCard.querySelectorAll("div.pre-avl")
+        ).filter(card => {
+            const text = (
+                card.querySelector("div > strong")
+                    ?.textContent || ""
+            )
+                .replace(/\s+/g, " ")
+                .trim()
+                .toUpperCase();
+
+            return /^\w{3},\s*\d{1,2}\s+\w{3}$/.test(text);
+        });
+
+        if (dateCards.length > 0) {
+            break;
+        }
+
+        await sleep(200);
+    }
+
+    console.log(
+        "[IRCTC AutoFill] Requested journey date:",
+        {
+            originalValue: value,
+            targetDateText,
+            year
+        }
+    );
+
+    console.log(
+        "[IRCTC AutoFill] Available date cards:",
+        dateCards.map(card => ({
+            date: (
+                card.querySelector("div > strong")
+                    ?.textContent || ""
+            ).trim(),
+            status: (
+                card.querySelector(
+                    ".WL, .AVAILABLE, .REGRET"
+                )?.textContent || ""
+            ).trim()
+        }))
+    );
+
+    // ఉదా: "Wed, 14 Oct" తో saved date match చేయాలి.
+    const targetCard = dateCards.find(card => {
+        const text = (
+            card.querySelector("div > strong")
+                ?.textContent || ""
+        )
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase();
+
+        const dateMatch = text.match(
+            /^\w{3},\s*(\d{1,2})\s+(\w{3})$/
+        );
+
+        if (!dateMatch) {
+            return false;
+        }
+
+        return (
+            Number(dateMatch[1]) === day &&
+            dateMatch[2] === targetMonth
+        );
+    });
+
+    if (!targetCard) {
+        return {
+            success: false,
+            message:
+                `${targetDateText} date card కనిపించలేదు. ` +
+                "Consoleలో Available date cards log చూడండి."
+        };
+    }
+
+    targetCard.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+    });
+
+    await sleep(300);
+
+    // Date card click
+    targetCard.click();
+
+    console.log(
+        "[IRCTC AutoFill] Journey date card clicked:",
+        targetCard.outerHTML
+    );
+
+    return {
+        success: true,
+        selectedDate: targetDateText,
+        message:
+            `Journey date card click చేయబడింది: ${targetDateText}`
+    };
+}
+
+
+
+
+
+function clickTrainClass(trainCard, savedClass) {
+    const value = String(savedClass || "")
+        .trim()
+        .toUpperCase();
+
+    const match = value.match(
+        /\b(1A|2A|3A|3E|CC|EC|EA|SL|2S|FC)\b/
+    );
+
+    if (!trainCard || !match) {
+        return {
+            success: false,
+            message: `Train record లేదా valid class లేదు: ${value}`
+        };
+    }
+
+    const classCode = match[1];
+
+    const cards = Array.from(
+        trainCard.querySelectorAll("div.pre-avl")
+    );
+
+    console.log(
+        "[IRCTC AutoFill] Availability cards:",
+        cards.map(card => ({
+            text: card.querySelector("strong")?.textContent?.trim(),
+            tabindex: card.getAttribute("tabindex"),
+            className: card.className
+        }))
+    );
+
+    const targetCard = cards.find(card => {
+        const text = (
+            card.querySelector("strong")?.textContent || ""
+        ).replace(/\s+/g, " ").trim().toUpperCase();
+
+        return text.includes(`(${classCode})`) ||
+            text === classCode;
+    });
+
+    if (!targetCard) {
+        return {
+            success: false,
+            message: `${classCode} availability card కనిపించలేదు.`
+        };
+    }
+
+    targetCard.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+    });
+
+    targetCard.click();
+
+    console.log(
+        "[IRCTC AutoFill] Availability card clicked:",
+        targetCard.outerHTML
+    );
+
+    return {
+        success: true,
+        selectedClass: classCode,
+        message: `${classCode} availability card click చేయబడింది.`
+    };
+}
+
+
+
+
 // ======================================================
 // CHECK SAVED TRAIN NUMBER IN SEARCH RESULTS
 // ======================================================
 
-async function checkSavedTrainOnPage(savedTrainNumber, timeoutMs = 15000) {
+
+
+
+
+async function checkSavedTrainOnPage(
+    savedTrainNumber,
+    savedClass,
+    journeyDate,
+    timeoutMs = 15000
+) {
     const startTime = Date.now();
 
+    const targetNumber = String(
+        savedTrainNumber || ""
+    ).trim();
+
     while (Date.now() - startTime < timeoutMs) {
-        const trainHeadings = document.querySelectorAll(".train-heading strong");
+        const trainHeadings = document.querySelectorAll(
+            ".train-heading strong"
+        );
 
         for (const heading of trainHeadings) {
-            const text = (heading.innerText || heading.textContent || "")
-                .replace(/\s+/g, " ")
-                .trim();
+            const text = (
+                heading.innerText ||
+                heading.textContent ||
+                ""
+            ).replace(/\s+/g, " ").trim();
 
             const match = text.match(/\((\d+)\)/);
 
-            if (match && match[1] === String(savedTrainNumber).trim()) {
-                const trainCard =
-                    heading.closest(".train-heading") ||
-                    heading.closest(".form-group") ||
-                    heading.parentElement?.parentElement;
+            if (!match || match[1] !== targetNumber) {
+                continue;
+            }
 
-                const target = trainCard || heading;
+            // 1. Saved train record గుర్తించాలి.
+            const trainRecord = heading.closest(
+                "app-train-avl-enq"
+            );
 
-                target.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                    inline: "nearest"
-                });
-
+            if (!trainRecord) {
                 return {
+                    success: false,
                     found: true,
-                    trainNumber: savedTrainNumber
+                    trainNumber: targetNumber,
+                    message: "Target train record కనిపించలేదు."
                 };
             }
+
+            trainRecord.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest"
+            });
+
+            await sleep(500);
+
+            // 2. Saved class select చేయాలి.
+            const classResult = clickTrainClass(
+                trainRecord,
+                savedClass
+            );
+
+            if (!classResult.success) {
+                return {
+                    success: false,
+                    found: true,
+                    trainNumber: targetNumber,
+                    message: classResult.message
+                };
+            }
+
+            // Class UI update అయ్యేవరకు వేచి ఉండాలి.
+            await sleep(1000);
+
+            // 3. Saved journey date card select చేయాలి.
+            const dateResult = await selectTrainJourneyDate(
+                trainRecord,
+                journeyDate
+            );
+
+            if (!dateResult.success) {
+                return {
+                    success: false,
+                    found: true,
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    message: dateResult.message
+                };
+            }
+
+            // Date click తర్వాత Angular UI update కోసం వేచి ఉండాలి.
+            await sleep(1000);
+
+            // 4. అదే train record లో Book Now button గుర్తించాలి.
+            const bookButton = trainRecord.querySelector(
+                "button.train_Search"
+            );
+
+            // Button state debug information.
+            console.log(
+                "[IRCTC AutoFill] Book Now state:",
+                {
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    selectedDate: dateResult.selectedDate,
+                    exists: !!bookButton,
+                    disabled: bookButton?.disabled,
+                    className: bookButton?.className,
+                    text: bookButton?.innerText?.trim()
+                }
+            );
+
+            if (!bookButton) {
+                return {
+                    success: false,
+                    found: true,
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    selectedDate: dateResult.selectedDate,
+                    message: "Book Now button కనిపించలేదు."
+                };
+            }
+
+            // Disabled state ఉన్నప్పుడు click చేయకూడదు.
+            if (
+                bookButton.disabled ||
+                bookButton.classList.contains("disable-book")
+            ) {
+                return {
+                    success: false,
+                    found: true,
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    selectedDate: dateResult.selectedDate,
+                    message:
+                        "Date card click అయింది, కానీ Book Now button disabledలో ఉంది."
+                };
+            }
+
+            // 5. Book Now click చేయాలి.
+            bookButton.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest"
+            });
+
+            await sleep(300);
+
+            // Click చేయడానికి ముందు state మళ్లీ తనిఖీ చేయాలి.
+            if (
+                !bookButton.isConnected ||
+                bookButton.disabled ||
+                bookButton.classList.contains("disable-book")
+            ) {
+                return {
+                    success: false,
+                    found: true,
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    selectedDate: dateResult.selectedDate,
+                    message:
+                        "Book Now button click చేసే ముందు disabled అయింది."
+                };
+            }
+
+            bookButton.click();
+
+            console.log(
+                "[IRCTC AutoFill] Book Now clicked:",
+                {
+                    trainNumber: targetNumber,
+                    selectedClass: classResult.selectedClass,
+                    selectedDate: dateResult.selectedDate
+                }
+            );
+
+            return {
+                success: true,
+                found: true,
+                trainNumber: targetNumber,
+                selectedClass: classResult.selectedClass,
+                selectedDate: dateResult.selectedDate,
+                message:
+                    `Train ${targetNumber}, ` +
+                    `${classResult.selectedClass}, ` +
+                    `${dateResult.selectedDate} select అయ్యాయి. ` +
+                    "Book Now click చేయబడింది."
+            };
         }
 
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await sleep(300);
     }
 
     return {
+        success: false,
         found: false,
-        trainNumber: savedTrainNumber
+        trainNumber: targetNumber,
+        message:
+            `Train ${targetNumber} train listలో కనిపించలేదు.`
     };
 }
+
+
+
 
 
 // ======================================================
