@@ -1,4 +1,5 @@
-﻿"use strict";
+﻿
+"use strict";
 
 const RECORDS_STORAGE_KEY = "bookingRecords";
 
@@ -12,12 +13,14 @@ async function initializeDashboard() {
         document.getElementById("trainSelectionFrame");
 
     const saveButton = document.getElementById("saveDetailsButton");
+    const loadButton = document.getElementById("loadJsonButton");
     const statusElement = document.getElementById("dashboardStatus");
 
-    const editingRecordId =
+    let editingRecordId =
         new URLSearchParams(window.location.search).get("id");
 
     let isSaving = false;
+    let isLoading = false;
     let previousBookingFrameHeight = "";
 
     function showStatus(message, type = "") {
@@ -88,7 +91,9 @@ async function initializeDashboard() {
             frame.addEventListener(
                 "error",
                 () => reject(
-                    new Error(`Unable to load ${frame.title || "a form"}.`)
+                    new Error(
+                        `Unable to load ${frame.title || "a form"}.`
+                    )
                 ),
                 { once: true }
             );
@@ -145,6 +150,8 @@ async function initializeDashboard() {
 
 
     try {
+        await RecordStorage.initialize();
+
         await Promise.all([
             waitForFrame(loginFrame),
             waitForFrame(bookingFrame),
@@ -180,11 +187,19 @@ async function initializeDashboard() {
 
         saveButton.addEventListener("click", saveAllDetails);
 
+        if (loadButton) {
+            loadButton.addEventListener("click", loadJsonRecords);
+        }
+
     } catch (error) {
         console.error("Dashboard initialization failed:", error);
 
         showStatus(error.message, "error");
         saveButton.disabled = true;
+
+        if (loadButton) {
+            loadButton.disabled = true;
+        }
     }
 
 
@@ -251,7 +266,6 @@ async function initializeDashboard() {
         );
 
         // Restore Train Selection.
-        // Supports both new records and records saved in earlier formats.
         const trainSelection =
             record.trainSelection ||
             booking.trainSelection ||
@@ -261,8 +275,109 @@ async function initializeDashboard() {
     }
 
 
+    async function loadJsonRecords() {
+        if (isLoading || isSaving) {
+            return;
+        }
+
+        isLoading = true;
+        loadButton.disabled = true;
+        loadButton.textContent = "Loading...";
+        showStatus("");
+
+        try {
+            // Open JSON file picker and read the selected file.
+            const records = await RecordStorage.readRecords();
+
+            if (records.length === 0) {
+                await chrome.storage.local.set({
+                    [RECORDS_STORAGE_KEY]: []
+                });
+
+                showStatus("JSON file contains no records.", "success");
+                return;
+            }
+
+            // Import JSON records into extension storage.
+            await chrome.storage.local.set({
+                [RECORDS_STORAGE_KEY]: records
+            });
+
+            // Let the user select a record to display.
+            const options = records.map((record, index) => {
+                const label =
+                    record.name ||
+                    record.id ||
+                    `Record ${index + 1}`;
+
+                return `${index + 1}. ${label}`;
+            });
+
+            const answer = window.prompt(
+                "Enter the record number to load:\n\n" +
+                options.join("\n"),
+                "1"
+            );
+
+            if (answer === null) {
+                showStatus(
+                    `${records.length} record(s) imported from JSON.`,
+                    "success"
+                );
+                return;
+            }
+
+            const selectedIndex = Number(answer) - 1;
+
+            if (
+                !Number.isInteger(selectedIndex) ||
+                selectedIndex < 0 ||
+                selectedIndex >= records.length
+            ) {
+                throw new Error("Invalid record number.");
+            }
+
+            const selectedRecord = records[selectedIndex];
+
+            if (
+                !selectedRecord ||
+                typeof selectedRecord.id !== "string"
+            ) {
+                throw new Error("Selected record has an invalid ID.");
+            }
+
+            editingRecordId = selectedRecord.id;
+
+            // Use the same loader used for existing records.
+            await loadExistingRecord(editingRecordId);
+
+            showStatus(
+                `Loaded: ${selectedRecord.name || selectedRecord.id}`,
+                "success"
+            );
+
+        } catch (error) {
+            if (error.name === "AbortError") {
+                return;
+            }
+
+            console.error("Load JSON failed:", error);
+
+            showStatus(
+                error.message || "Unable to load JSON records.",
+                "error"
+            );
+
+        } finally {
+            isLoading = false;
+            loadButton.disabled = false;
+            loadButton.textContent = "Load";
+        }
+    }
+
+
     async function saveAllDetails() {
-        if (isSaving) {
+        if (isSaving || isLoading) {
             return;
         }
 
@@ -322,7 +437,6 @@ async function initializeDashboard() {
             // Read Train Selection fields.
             const trainSelection = readTrainSelection();
 
-            // Validate according to the selected matching rule.
             if (
                 trainSelection.matchingRule === "number" &&
                 !trainSelection.trainNumber
@@ -390,9 +504,12 @@ async function initializeDashboard() {
                         "railwayPassConcession"
                     ).checked,
 
-                // Store Train Selection with the booking.
                 trainSelection
             };
+
+            // Trigger the file picker before other awaited operations.
+            // Handle cancellation without losing the existing local save.
+            
 
             const result = await chrome.storage.local.get(
                 RECORDS_STORAGE_KEY
@@ -409,6 +526,9 @@ async function initializeDashboard() {
                 `${getStationCode(toStation)}`;
 
             const login = { username, password };
+            const wasEditing = Boolean(editingRecordId);
+
+            let newRecordId = null;
 
             if (editingRecordId) {
                 const index = records.findIndex(
@@ -431,8 +551,10 @@ async function initializeDashboard() {
                 };
 
             } else {
+                newRecordId = crypto.randomUUID();
+
                 records.push({
-                    id: crypto.randomUUID(),
+                    id: newRecordId,
                     name,
                     login,
                     booking,
@@ -442,12 +564,18 @@ async function initializeDashboard() {
                 });
             }
 
+            // Preserve the existing Chrome storage save.
             await chrome.storage.local.set({
                 [RECORDS_STORAGE_KEY]: records
             });
 
+            if (newRecordId) {
+                editingRecordId = newRecordId;
+            }
+
+
             showStatus(
-                editingRecordId
+                wasEditing
                     ? "Login, Journey and Train Selection details updated."
                     : "Login, Journey and Train Selection details saved.",
                 "success"

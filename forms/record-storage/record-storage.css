@@ -1,0 +1,31 @@
+
+.dashboard-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+#loadJsonButton {
+    min-width: 90px;
+    min-height: 38px;
+    padding: 8px 20px;
+    border: 1px solid #2864e8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2864e8;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+    #loadJsonButton:hover {
+        background: #edf3ff;
+    }
+
+    #loadJsonButton:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }

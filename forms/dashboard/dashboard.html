@@ -7,9 +7,14 @@
     <title>IRCTC AutoFill Dashboard</title>
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="../../common/toast.css">
+    <link rel="stylesheet" href="../record-storage/record-storage.css">
 </head>
 <body>
     <main class="dashboard-container">
+
+        <div class="dashboard-toolbar">
+            <button type="button" id="loadJsonButton">Load</button>
+        </div>
 
         <section class="dashboard-section login-section">
             <iframe id="loginFrame"
@@ -41,6 +46,7 @@
     </main>
 
     <script src="../../common/toast.js"></script>
+    <script src="../record-storage/record-storage.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
