@@ -169,35 +169,95 @@ function getVisibleLoginFields() {
 }
 
 function isIrctcLoggedIn() {
-    const logoutSelectors = [
-        'a[href*="logout" i]',
-        'button[aria-label*="logout" i]',
-        '[aria-label*="sign out" i]',
-        '[routerlink*="logout" i]'
-    ];
+    const isVisible = (element) => {
+        if (!element) return false;
 
-    for (const selector of logoutSelectors) {
-        if (
-            Array.from(document.querySelectorAll(selector))
-                .some(isElementVisible)
-        ) {
-            return true;
-        }
+        const style = window.getComputedStyle(element);
+
+        return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            Number(style.opacity) !== 0 &&
+            element.getClientRects().length > 0
+        );
+    };
+
+    // Login fields కనిపిస్తే ఇంకా login కాలేదు.
+    const loginFields = getVisibleLoginFields();
+
+    if (loginFields.username || loginFields.password) {
+        return false;
     }
 
-    const visibleControls = Array.from(
-        document.querySelectorAll("a, button, [role='button']")
-    ).filter(isElementVisible);
-
-    return visibleControls.some(element => {
+    // Login / Register link ఇంకా కనిపిస్తే login కాలేదు.
+    const loginRegisterVisible = Array.from(
+        document.querySelectorAll("a.loginText")
+    ).some(element => {
         const text = normalizeText(
             element.innerText || element.textContent
         );
 
-        return text === "logout" ||
-            text === "log out" ||
-            text === "sign out";
+        const ariaLabel = normalizeText(
+            element.getAttribute("aria-label")
+        );
+
+        return (
+            isVisible(element) &&
+            (
+                text.includes("login / register") ||
+                ariaLabel.includes("login in application")
+            )
+        );
     });
+
+    if (loginRegisterVisible) {
+        return false;
+    }
+
+    // Logout indicators ఉంటే login పూర్తయింది.
+    const logoutSelectors = [
+        'a[href*="logout" i]',
+        'button[aria-label*="logout" i]',
+        '[aria-label*="sign out" i]',
+        '[routerlink*="logout" i]',
+        'a[href*="signout" i]'
+    ];
+
+    for (const selector of logoutSelectors) {
+        const found = Array.from(
+            document.querySelectorAll(selector)
+        ).some(isVisible);
+
+        if (found) {
+            return true;
+        }
+    }
+
+    // Logout indicator లేకపోయినా, login link లేని స్థితిలో
+    // booking form పూర్తిగా కనిపిస్తే login అయి ఉండవచ్చని భావించాలి.
+    const from = document.querySelector("#origin input");
+    const to = document.querySelector("#destination input");
+    const date = document.querySelector("#jDate input");
+    const travelClass = document.querySelector("#journeyClass");
+    const quota = document.querySelector("#journeyQuota");
+
+    const bookingFormVisible = [
+        from,
+        to,
+        date,
+        travelClass,
+        quota
+    ].every(isVisible);
+
+    if (bookingFormVisible && !loginRegisterVisible) {
+        console.log(
+            "[IRCTC Login] Booking form కనిపిస్తోంది; login fields లేవు."
+        );
+
+        return true;
+    }
+
+    return false;
 }
 
 function hasCaptchaOrOtp() {
@@ -1249,6 +1309,39 @@ function setCheckbox(selector, checked) {
     };
 }
 
+async function waitForBookingForm(timeoutMs = 20000) {
+    const timeoutAt = Date.now() + timeoutMs;
+
+    while (Date.now() < timeoutAt) {
+        const from = document.querySelector("#origin input");
+        const to = document.querySelector("#destination input");
+        const date = document.querySelector("#jDate input");
+        const travelClass = document.querySelector("#journeyClass");
+        const quota = document.querySelector("#journeyQuota");
+
+        if (
+            from?.isConnected &&
+            to?.isConnected &&
+            date?.isConnected &&
+            travelClass?.isConnected &&
+            quota?.isConnected
+        ) {
+            console.log(
+                "[IRCTC AutoFill] Booking form is ready."
+            );
+            return true;
+        }
+
+        await sleep(300);
+    }
+
+    console.error(
+        "[IRCTC AutoFill] Booking form did not load within 20 seconds."
+    );
+
+    return false;
+}
+
 // ======================================================
 // BOOKING AUTOFILL
 // ======================================================
@@ -1514,6 +1607,20 @@ chrome.runtime.onMessage.addListener(
                         message.booking
                     );
 
+                    // Booking autofill విజయవంతమైతే pending details తొలగించాలి.
+                    if (result?.success) {
+                        try {
+                            await chrome.runtime.sendMessage({
+                                action: "CLEAR_PENDING_AUTOFILL"
+                            });
+                        } catch (error) {
+                            console.warn(
+                                "[IRCTC AutoFill] Pending details clear కాలేదు:",
+                                error
+                            );
+                        }
+                    }
+
                     sendResponse(result);
                 } catch (error) {
                     console.error("IRCTC autofill error:", error);
@@ -1533,3 +1640,129 @@ chrome.runtime.onMessage.addListener(
 
     }
 );
+
+// ======================================================
+// RESUME BOOKING AUTOFILL AFTER LOGIN / PAGE RELOAD
+// ======================================================
+
+let pendingBookingResumeStarted = false;
+
+async function resumePendingBookingAutofill() {
+    if (pendingBookingResumeStarted) {
+        return;
+    }
+
+    pendingBookingResumeStarted = true;
+
+    try {
+        const response = await chrome.runtime.sendMessage({
+            action: "GET_PENDING_AUTOFILL"
+        });
+
+        if (!response?.success || !response.pending) {
+            console.log(
+                "[IRCTC AutoFill] Pending booking details లేవు."
+            );
+            return;
+        }
+
+        const pending = response.pending;
+
+        if (!pending.booking) {
+            console.warn(
+                "[IRCTC AutoFill] Pending booking details ఖాళీగా ఉన్నాయి."
+            );
+            return;
+        }
+
+        console.log(
+            "[IRCTC AutoFill] Pending booking details found."
+        );
+
+        // Login పూర్తయ్యే వరకు వేచి ఉండాలి.
+        const loginTimeoutAt = Date.now() + 120000;
+
+        while (Date.now() < loginTimeoutAt) {
+            if (isIrctcLoggedIn()) {
+                break;
+            }
+
+            await sleep(1000);
+        }
+
+        if (!isIrctcLoggedIn()) {
+            console.warn(
+                "[IRCTC AutoFill] Login confirmation timeout."
+            );
+            return;
+        }
+
+        console.log(
+            "[IRCTC AutoFill] Login confirmed."
+        );
+
+        // Angular booking form పూర్తిగా load అయ్యే వరకు వేచి ఉండాలి.
+        const formReady = await waitForBookingForm(20000);
+
+        if (!formReady) {
+            console.warn(
+                "[IRCTC AutoFill] Booking form load కాలేదు. " +
+                "Pending details అలాగే ఉంచబడ్డాయి."
+            );
+            return;
+        }
+
+        // మరో autofill process నడుస్తుంటే duplicate చేయకూడదు.
+        if (bookingAutofillRunning) {
+            console.warn(
+                "[IRCTC AutoFill] మరో autofill process ఇప్పటికే నడుస్తోంది."
+            );
+            return;
+        }
+
+        bookingAutofillRunning = true;
+
+        try {
+            console.log(
+                "[IRCTC AutoFill] Starting automatic booking autofill."
+            );
+
+            const result = await fillBookingDetails(
+                pending.booking
+            );
+
+            console.log(
+                "[IRCTC AutoFill] Resumed booking result:",
+                result
+            );
+
+            if (result?.success) {
+                await chrome.runtime.sendMessage({
+                    action: "CLEAR_PENDING_AUTOFILL"
+                });
+
+                console.log(
+                    "[IRCTC AutoFill] Pending booking cleared."
+                );
+            } else {
+                console.error(
+                    "[IRCTC AutoFill] Booking autofill failed:",
+                    result?.message,
+                    result?.results
+                );
+            }
+        } finally {
+            bookingAutofillRunning = false;
+        }
+    } catch (error) {
+        console.error(
+            "[IRCTC AutoFill] Resume error:",
+            error
+        );
+    } finally {
+        pendingBookingResumeStarted = false;
+    }
+}
+
+// Content script load అయిన వెంటనే pending booking‌ను తనిఖీ చేయాలి.
+resumePendingBookingAutofill();
