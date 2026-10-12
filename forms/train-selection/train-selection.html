@@ -1,0 +1,49 @@
+<section class="train-selection-card" aria-labelledby="trainSelectionHeading">
+    <header class="train-selection-header">
+        <h2 id="trainSelectionHeading">TRAIN SELECTION</h2>
+        <p>Choose the train to continue with after Search Trains.</p>
+    </header>
+
+    <div class="train-selection-grid">
+        <div class="train-selection-field">
+            <label for="preferredTrainNumber">Train Number</label>
+            <input id="preferredTrainNumber"
+                   name="preferredTrainNumber"
+                   type="text"
+                   inputmode="numeric"
+                   autocomplete="off"
+                   placeholder="e.g. 18045">
+        </div>
+
+        <div class="train-selection-field">
+            <label for="preferredTrainName">Train Name</label>
+            <input id="preferredTrainName"
+                   name="preferredTrainName"
+                   type="text"
+                   autocomplete="off"
+                   placeholder="e.g. EAST COAST EXP">
+        </div>
+    </div>
+
+    <div class="train-selection-field">
+        <label for="trainMatchingRule">Train matching rule</label>
+        <select id="trainMatchingRule" name="trainMatchingRule">
+            <option value="both" selected>Train Number and Train Name must match</option>
+            <option value="number">Train Number only</option>
+            <option value="name">Train Name only</option>
+        </select>
+        <small>Enter at least one train detail before using automatic train selection.</small>
+    </div>
+
+    <div class="train-selection-field">
+        <label for="trainAvailabilityRule">Availability preference</label>
+        <select id="trainAvailabilityRule" name="trainAvailabilityRule">
+            <option value="any" selected>Class is listed — continue</option>
+            <option value="available">Continue only when availability is bookable</option>
+        </select>
+    </div>
+
+    <p class="train-selection-note">
+        Travel Class is taken from Journey Details; no separate class setting is needed here.
+    </p>
+</section>
