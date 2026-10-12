@@ -1498,6 +1498,28 @@ async function fillBookingDetails(booking) {
         };
     }
 
+    // 8. Search resultsలో saved Train Number ఉందో తనిఖీ చేయాలి.
+    const savedTrainNumber = String(
+        booking.trainSelection?.trainNumber ||
+        booking.trainNumber ||
+        ""
+    ).trim();
+
+    if (savedTrainNumber) {
+        const trainCheckResult =
+            await checkSavedTrainOnPage(savedTrainNumber);
+
+        addResult("Saved Train Check", trainCheckResult);
+    } else {
+        const trainCheckResult = {
+            success: false,
+            message: "Saved Train Number కనిపించలేదు."
+        };
+
+        addResult("Saved Train Check", trainCheckResult);
+        alert("NO — Saved Train Number not found in saved details.");
+    }
+
     return {
         success: true,
         message:
@@ -1534,6 +1556,78 @@ async function clickSearchTrains() {
     return {
         success: true,
         message: "Search Trains బటన్ క్లిక్ చేయబడింది."
+    };
+}
+
+
+// ======================================================
+// CHECK SAVED TRAIN NUMBER IN SEARCH RESULTS
+// ======================================================
+
+async function checkSavedTrainOnPage(savedTrainNumber, timeoutMs = 15000) {
+    const targetNumber = String(savedTrainNumber || "").trim();
+
+    if (!targetNumber) {
+        alert("NO — Saved Train Number is empty.");
+        return {
+            success: false,
+            message: "Saved Train Number ఖాళీగా ఉంది."
+        };
+    }
+
+    const deadline = Date.now() + timeoutMs;
+    let trainListRendered = false;
+    let found = false;
+
+    while (Date.now() < deadline) {
+        const headings = Array.from(
+            document.querySelectorAll(".train-heading strong")
+        );
+
+        if (headings.length > 0) {
+            trainListRendered = true;
+
+            found = headings.some(heading => {
+                const text = String(
+                    heading.innerText || heading.textContent || ""
+                ).replace(/\\s+/g, " ").trim();
+
+                // ఉదాహరణ: SC SHM AC SF EX (12774)
+                const match = text.match(/\\((\\d+)\\)/);
+
+                return match && match[1] === targetNumber;
+            });
+
+            if (found) break;
+        }
+
+        await sleep(300);
+    }
+
+    if (found) {
+        alert(`YES — Saved Train ${targetNumber} found in the train list.`);
+        return {
+            success: true,
+            message: `Train ${targetNumber} train listలో గుర్తించబడింది.`
+        };
+    }
+
+    if (!trainListRendered) {
+        alert(
+            `NO — Train ${targetNumber} not found. ` +
+            "Train results list load కాలేదు లేదా train cards కనిపించలేదు."
+        );
+        return {
+            success: false,
+            message:
+                `Train results list load కాలేదు; Train ${targetNumber}ను నిర్ధారించలేకపోయాం.`
+        };
+    }
+
+    alert(`NO — Saved Train ${targetNumber} not found in the train list.`);
+    return {
+        success: false,
+        message: `Train ${targetNumber} train listలో కనిపించలేదు.`
     };
 }
 

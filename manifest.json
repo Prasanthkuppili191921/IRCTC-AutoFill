@@ -16,7 +16,8 @@
         "https://www.irctc.co.in/*"
       ],
       "js": [
-        "content.js"
+        "content/content-1.js",
+        "content/content-2.js"
       ],
       "run_at": "document_idle"
     }

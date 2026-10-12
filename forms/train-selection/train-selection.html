@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Selection</title>
+    <link rel="stylesheet" href="train-selection.css">
+</head>
+<body>
+    <main class="page-container">
+        <section class="train-selection-card">
+            <header class="page-header">
+                <h1>TRAIN SELECTION</h1>
+                <p>Enter your preferred train details</p>
+            </header>
+
+            <form id="trainSelectionForm" novalidate>
+                <div class="train-grid">
+                    <div class="field-group">
+                        <label for="preferredTrainNumber">
+                            Train Number
+                        </label>
+                        <input id="preferredTrainNumber"
+                               name="preferredTrainNumber"
+                               type="text"
+                               inputmode="numeric"
+                               maxlength="6"
+                               autocomplete="off"
+                               placeholder="Enter Train Number">
+                    </div>
+
+                    <div class="field-group">
+                        <label for="preferredTrainName">
+                            Train Name
+                        </label>
+                        <input id="preferredTrainName"
+                               name="preferredTrainName"
+                               type="text"
+                               autocomplete="off"
+                               placeholder="Enter Train Name">
+                    </div>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="train-selection.js"></script>
+</body>
+</html>

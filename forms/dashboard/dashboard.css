@@ -188,3 +188,31 @@ body {
 		font-size: 14px;
 	}
 }
+
+/* ========================================
+   Train Selection Frame
+======================================== */
+
+#trainSelectionFrame {
+	display: block;
+	width: 100%;
+	height: 250px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 16px;
+	background: #ffffff;
+}
+
+@media (max-width: 768px) {
+	#trainSelectionFrame {
+		height: 420px;
+	}
+}
+
+@media (max-width: 480px) {
+	#trainSelectionFrame {
+		height: 460px;
+		border-radius: 12px;
+	}
+}

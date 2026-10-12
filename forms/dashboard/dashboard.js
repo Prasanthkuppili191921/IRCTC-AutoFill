@@ -1,5 +1,4 @@
-﻿
-"use strict";
+﻿"use strict";
 
 const RECORDS_STORAGE_KEY = "bookingRecords";
 
@@ -9,6 +8,9 @@ document.addEventListener("DOMContentLoaded", initializeDashboard);
 async function initializeDashboard() {
     const loginFrame = document.getElementById("loginFrame");
     const bookingFrame = document.getElementById("bookingFrame");
+    const trainSelectionFrame =
+        document.getElementById("trainSelectionFrame");
+
     const saveButton = document.getElementById("saveDetailsButton");
     const statusElement = document.getElementById("dashboardStatus");
 
@@ -27,7 +29,12 @@ async function initializeDashboard() {
         }
 
         if (type === "error") {
-            IRCTCToast.show(message, "error");
+            if (typeof IRCTCToast !== "undefined") {
+                IRCTCToast.show(message, "error");
+            } else {
+                statusElement.textContent = message;
+            }
+
             return;
         }
 
@@ -35,7 +42,7 @@ async function initializeDashboard() {
     }
 
 
-    // Calendar popup messages from booking iframe.
+    // Calendar popup messages from Journey Details iframe.
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin) {
             return;
@@ -63,7 +70,14 @@ async function initializeDashboard() {
         }
     });
 
+
     function waitForFrame(frame) {
+        if (!frame) {
+            return Promise.reject(
+                new Error("A required Dashboard iframe was not found.")
+            );
+        }
+
         if (frame.contentDocument?.readyState === "complete") {
             return Promise.resolve();
         }
@@ -73,14 +87,17 @@ async function initializeDashboard() {
 
             frame.addEventListener(
                 "error",
-                () => reject(new Error("Unable to load a form.")),
+                () => reject(
+                    new Error(`Unable to load ${frame.title || "a form"}.`)
+                ),
                 { once: true }
             );
         });
     }
 
+
     function getFrameDocument(frame) {
-        const doc = frame.contentDocument;
+        const doc = frame?.contentDocument;
 
         if (!doc) {
             throw new Error("Unable to access a form.");
@@ -89,15 +106,55 @@ async function initializeDashboard() {
         return doc;
     }
 
+
+    function getTrainSelectionFields() {
+        const doc = getFrameDocument(trainSelectionFrame);
+
+        const fields = {
+            trainNumber: doc.getElementById("preferredTrainNumber"),
+            trainName: doc.getElementById("preferredTrainName")
+        };
+
+        if (!fields.trainNumber || !fields.trainName) {
+            throw new Error(
+                "Train Selection fields were not found. " +
+                "Check the IDs in train-selection.html."
+            );
+        }
+
+        return fields;
+    }
+
+
+    function readTrainSelection() {
+        const fields = getTrainSelectionFields();
+
+        return {
+            trainNumber: fields.trainNumber.value.trim(),
+            trainName: fields.trainName.value.trim()
+        };
+    }
+
+
+    function populateTrainSelection(value = {}) {
+        const fields = getTrainSelectionFields();
+
+        fields.trainNumber.value = value.trainNumber || "";
+        fields.trainName.value = value.trainName || "";
+    }
+
+
     try {
         await Promise.all([
             waitForFrame(loginFrame),
-            waitForFrame(bookingFrame)
+            waitForFrame(bookingFrame),
+            waitForFrame(trainSelectionFrame)
         ]);
 
         const loginDoc = getFrameDocument(loginFrame);
         const bookingDoc = getFrameDocument(bookingFrame);
 
+        // Validate Login form.
         if (
             !loginDoc.getElementById("username") ||
             !loginDoc.getElementById("password")
@@ -105,6 +162,7 @@ async function initializeDashboard() {
             throw new Error("Login form fields were not found.");
         }
 
+        // Validate Journey Details form.
         if (
             !bookingDoc.getElementById("fromStation") ||
             !bookingDoc.getElementById("toStation") ||
@@ -112,6 +170,9 @@ async function initializeDashboard() {
         ) {
             throw new Error("Journey form fields were not found.");
         }
+
+        // Validate Train Selection form.
+        getTrainSelectionFields();
 
         if (editingRecordId) {
             await loadExistingRecord(editingRecordId);
@@ -121,9 +182,11 @@ async function initializeDashboard() {
 
     } catch (error) {
         console.error("Dashboard initialization failed:", error);
+
         showStatus(error.message, "error");
         saveButton.disabled = true;
     }
+
 
     async function loadExistingRecord(recordId) {
         const result = await chrome.storage.local.get(
@@ -146,19 +209,23 @@ async function initializeDashboard() {
         const login = record.login || {};
         const booking = record.booking || record;
 
+        // Restore Login fields.
         loginDoc.getElementById("username").value =
             login.username || "";
 
         loginDoc.getElementById("password").value =
             login.password || "";
 
+        // Restore Journey Details.
         bookingDoc.getElementById("fromStation").value =
             booking.fromStation || "";
 
         bookingDoc.getElementById("toStation").value =
             booking.toStation || "";
 
-        const dateInput = bookingDoc.getElementById("journeyDate");
+        const dateInput =
+            bookingDoc.getElementById("journeyDate");
+
         dateInput.value = normalizeDate(booking.journeyDate);
 
         bookingDoc.getElementById("travelClass").value =
@@ -182,7 +249,17 @@ async function initializeDashboard() {
         dateInput.dispatchEvent(
             new Event("input", { bubbles: true })
         );
+
+        // Restore Train Selection.
+        // Supports both new records and records saved in earlier formats.
+        const trainSelection =
+            record.trainSelection ||
+            booking.trainSelection ||
+            {};
+
+        populateTrainSelection(trainSelection);
     }
+
 
     async function saveAllDetails() {
         if (isSaving) {
@@ -198,6 +275,7 @@ async function initializeDashboard() {
             const loginDoc = getFrameDocument(loginFrame);
             const bookingDoc = getFrameDocument(bookingFrame);
 
+            // Read Login fields.
             const username =
                 loginDoc.getElementById("username").value.trim();
 
@@ -210,6 +288,7 @@ async function initializeDashboard() {
                 );
             }
 
+            // Read Journey Details fields.
             const fromStation =
                 bookingDoc.getElementById("fromStation").value.trim();
 
@@ -220,11 +299,14 @@ async function initializeDashboard() {
                 bookingDoc.getElementById("journeyDate").value.trim();
 
             if (!fromStation || !toStation) {
-                throw new Error("Enter both From and To stations.");
+                throw new Error(
+                    "Enter both From and To stations."
+                );
             }
 
             if (
-                fromStation.toUpperCase() === toStation.toUpperCase()
+                fromStation.toUpperCase() ===
+                toStation.toUpperCase()
             ) {
                 throw new Error(
                     "From and To stations must be different."
@@ -237,25 +319,79 @@ async function initializeDashboard() {
                 );
             }
 
+            // Read Train Selection fields.
+            const trainSelection = readTrainSelection();
+
+            // Validate according to the selected matching rule.
+            if (
+                trainSelection.matchingRule === "number" &&
+                !trainSelection.trainNumber
+            ) {
+                throw new Error(
+                    "Enter a Train Number for the selected matching rule."
+                );
+            }
+
+            if (
+                trainSelection.matchingRule === "name" &&
+                !trainSelection.trainName
+            ) {
+                throw new Error(
+                    "Enter a Train Name for the selected matching rule."
+                );
+            }
+
+            if (
+                trainSelection.matchingRule === "both" &&
+                !trainSelection.trainNumber &&
+                !trainSelection.trainName
+            ) {
+                throw new Error(
+                    "Enter a Train Number or Train Name."
+                );
+            }
+
+            if (
+                trainSelection.matchingRule === "both" &&
+                (
+                    !trainSelection.trainNumber ||
+                    !trainSelection.trainName
+                )
+            ) {
+                throw new Error(
+                    "For Train Number and Train Name matching, " +
+                    "enter both values."
+                );
+            }
+
+            // Preserve the existing Journey Details record structure.
             const booking = {
                 fromStation: fromStation.toUpperCase(),
                 toStation: toStation.toUpperCase(),
                 journeyDate,
                 journeyDateKey: getDateKey(journeyDate),
+
                 travelClass:
                     bookingDoc.getElementById("travelClass").value,
+
                 quota:
                     bookingDoc.getElementById("quota").value,
+
                 flexibleDate:
                     bookingDoc.getElementById("flexibleDate").checked,
+
                 personWithDisabilityConcession:
                     bookingDoc.getElementById(
                         "personWithDisabilityConcession"
                     ).checked,
+
                 railwayPassConcession:
                     bookingDoc.getElementById(
                         "railwayPassConcession"
-                    ).checked
+                    ).checked,
+
+                // Store Train Selection with the booking.
+                trainSelection
             };
 
             const result = await chrome.storage.local.get(
@@ -280,7 +416,9 @@ async function initializeDashboard() {
                 );
 
                 if (index === -1) {
-                    throw new Error("Saved record no longer exists.");
+                    throw new Error(
+                        "Saved record no longer exists."
+                    );
                 }
 
                 records[index] = {
@@ -288,14 +426,17 @@ async function initializeDashboard() {
                     name,
                     login,
                     booking,
+                    trainSelection,
                     updatedAt: now
                 };
+
             } else {
                 records.push({
                     id: crypto.randomUUID(),
                     name,
                     login,
                     booking,
+                    trainSelection,
                     createdAt: now,
                     updatedAt: now
                 });
@@ -307,8 +448,8 @@ async function initializeDashboard() {
 
             showStatus(
                 editingRecordId
-                    ? "Login and Journey details updated."
-                    : "Login and Journey details saved.",
+                    ? "Login, Journey and Train Selection details updated."
+                    : "Login, Journey and Train Selection details saved.",
                 "success"
             );
 
@@ -318,11 +459,14 @@ async function initializeDashboard() {
 
         } catch (error) {
             console.error("Save Details failed:", error);
+
             showStatus(
                 error.message || "Unable to save details.",
                 "error"
             );
+
             saveButton.textContent = "Save Details";
+
         } finally {
             isSaving = false;
             saveButton.disabled = false;
@@ -332,7 +476,9 @@ async function initializeDashboard() {
 
 
 function normalizeDate(value) {
-    if (typeof value !== "string") return "";
+    if (typeof value !== "string") {
+        return "";
+    }
 
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
         return isValidDate(value) ? value : "";
@@ -341,19 +487,25 @@ function normalizeDate(value) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         const [year, month, day] = value.split("-");
         const formatted = `${day}/${month}/${year}`;
+
         return isValidDate(formatted) ? formatted : "";
     }
 
     return "";
 }
 
+
 function isValidDate(value) {
     const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-    if (!match) return false;
+
+    if (!match) {
+        return false;
+    }
 
     const day = Number(match[1]);
     const month = Number(match[2]);
     const year = Number(match[3]);
+
     const date = new Date(year, month - 1, day);
 
     return date.getFullYear() === year &&
@@ -361,10 +513,13 @@ function isValidDate(value) {
         date.getDate() === day;
 }
 
+
 function getDateKey(value) {
     const [day, month, year] = value.split("/");
+
     return `${year}-${month}-${day}`;
 }
+
 
 function getStationCode(stationName) {
     const match = String(stationName || "").match(
