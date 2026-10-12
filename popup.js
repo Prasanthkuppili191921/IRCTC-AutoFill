@@ -330,6 +330,7 @@ async function autoFillRecord(record) {
         chrome.runtime.sendMessage(
             {
                 action: "START_BACKGROUND_AUTOFILL",
+                login: record?.login || {},
                 booking
             },
             response => {

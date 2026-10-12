@@ -7,6 +7,7 @@ chrome.runtime.onMessage.addListener(
             return;
         }
 
+        const login = message.login || {};
         const booking = message.booking;
 
         if (!booking) {
@@ -38,6 +39,7 @@ chrome.runtime.onMessage.addListener(
                         tab.id,
                         {
                             action: "FILL_BOOKING",
+                            login,
                             booking
                         }
                     );

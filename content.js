@@ -138,6 +138,384 @@ function fillLoginDetails(username, password) {
     };
 }
 
+
+function isElementVisible(element) {
+    if (!element) return false;
+
+    const style = window.getComputedStyle(element);
+
+    return style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        element.getClientRects().length > 0;
+}
+
+function getVisibleLoginFields() {
+    const username = Array.from(
+        document.querySelectorAll(
+            'input[formcontrolname="userid"], ' +
+            'input[placeholder="User Name"]'
+        )
+    ).find(isElementVisible);
+
+    const password = Array.from(
+        document.querySelectorAll(
+            'input[formcontrolname="password"], ' +
+            'input[placeholder="Password"], ' +
+            'input[type="password"]'
+        )
+    ).find(isElementVisible);
+
+    return { username, password };
+}
+
+function isIrctcLoggedIn() {
+    const logoutSelectors = [
+        'a[href*="logout" i]',
+        'button[aria-label*="logout" i]',
+        '[aria-label*="sign out" i]',
+        '[routerlink*="logout" i]'
+    ];
+
+    for (const selector of logoutSelectors) {
+        if (
+            Array.from(document.querySelectorAll(selector))
+                .some(isElementVisible)
+        ) {
+            return true;
+        }
+    }
+
+    const visibleControls = Array.from(
+        document.querySelectorAll("a, button, [role='button']")
+    ).filter(isElementVisible);
+
+    return visibleControls.some(element => {
+        const text = normalizeText(
+            element.innerText || element.textContent
+        );
+
+        return text === "logout" ||
+            text === "log out" ||
+            text === "sign out";
+    });
+}
+
+function hasCaptchaOrOtp() {
+    const selectors = [
+        'input[formcontrolname*="captcha" i]',
+        'input[placeholder*="captcha" i]',
+        'input[aria-label*="captcha" i]',
+        'input[name*="captcha" i]',
+        'input[formcontrolname="otp" i]',
+        'input[placeholder*="otp" i]',
+        'input[aria-label*="otp" i]',
+        'input[name="otp" i]',
+        'input[autocomplete="one-time-code"]'
+    ];
+
+    return selectors.some(selector =>
+        Array.from(document.querySelectorAll(selector))
+            .some(element =>
+                isElementVisible(element) &&
+                !element.disabled &&
+                element.type !== "checkbox" &&
+                element.type !== "radio"
+            )
+    );
+}
+
+async function openLoginFormIfNeeded() {
+    // Login form ఇప్పటికే కనిపిస్తే మళ్లీ open చేయాల్సిన అవసరం లేదు.
+    let fields = getVisibleLoginFields();
+
+    if (fields.username && fields.password) {
+        return true;
+    }
+
+    // IRCTC LOGIN / REGISTER link కోసం వేచి ఉండాలి.
+    for (let attempt = 0; attempt < 20; attempt++) {
+        const loginControl = Array.from(
+            document.querySelectorAll("a.loginText")
+        ).find(element =>
+            isElementVisible(element) &&
+            normalizeText(element.innerText).includes("login / register")
+        );
+
+        if (loginControl) {
+            loginControl.click();
+
+            // Modal open అయ్యే వరకు వేచి ఉండాలి.
+            for (let wait = 0; wait < 40; wait++) {
+                await sleep(250);
+
+                fields = getVisibleLoginFields();
+
+                if (fields.username && fields.password) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        await sleep(250);
+    }
+
+    console.warn(
+        "[IRCTC AutoFill] LOGIN / REGISTER link కనిపించలేదు."
+    );
+
+    return false;
+}
+
+
+
+
+function findLoginSubmitButton() {
+    const username = Array.from(
+        document.querySelectorAll(
+            'input[formcontrolname="userid"], input[placeholder="User Name"]'
+        )
+    ).find(isElementVisible);
+
+    const password = Array.from(
+        document.querySelectorAll(
+            'input[formcontrolname="password"], input[placeholder="Password"], input[type="password"]'
+        )
+    ).find(isElementVisible);
+
+    if (!username || !password) {
+        console.warn(
+            "[IRCTC Login] Username or Password field not found."
+        );
+        return null;
+    }
+
+    const loginForm = username.closest("form");
+
+    if (!loginForm || password.closest("form") !== loginForm) {
+        console.warn(
+            "[IRCTC Login] Username and Password are not in the same form."
+        );
+        return null;
+    }
+
+    const loginButton = loginForm.querySelector(
+        'button.train_Search_custom_hover[type="submit"]'
+    );
+
+    if (
+        !loginButton ||
+        !isElementVisible(loginButton) ||
+        loginButton.disabled ||
+        normalizeText(loginButton.textContent) !== "sign in"
+    ) {
+        console.warn(
+            "[IRCTC Login] SIGN IN button not found in login form."
+        );
+        return null;
+    }
+
+    console.log(
+        "[IRCTC Login] SIGN IN button found:",
+        loginButton
+    );
+
+    return loginButton;
+}
+
+
+async function ensureIrctcLogin(login) {
+    // 1. Login form కనిపిస్తుందో తనిఖీ చేయాలి.
+    let fields = getVisibleLoginFields();
+
+    if (!fields.username || !fields.password) {
+        const loginControl = Array.from(
+            document.querySelectorAll(
+                'a.loginText[aria-label="Click here to Login in application"]'
+            )
+        ).find(isElementVisible);
+
+        if (!loginControl) {
+            if (isIrctcLoggedIn()) {
+                return {
+                    success: true,
+                    message: "IRCTC login ఇప్పటికే పూర్తయింది."
+                };
+            }
+
+            return {
+                success: false,
+                message: "LOGIN / REGISTER link కనిపించలేదు."
+            };
+        }
+
+        loginControl.click();
+
+        let formOpened = false;
+
+        for (let attempt = 0; attempt < 40; attempt++) {
+            await sleep(250);
+
+            fields = getVisibleLoginFields();
+
+            if (fields.username && fields.password) {
+                formOpened = true;
+                break;
+            }
+        }
+
+        if (!formOpened) {
+            return {
+                success: false,
+                message: "LOGIN / REGISTER నొక్కినా Login box తెరుచుకోలేదు."
+            };
+        }
+    }
+
+    // 2. Saved credentials తనిఖీ చేయాలి.
+    if (!login?.username || !login?.password) {
+        return {
+            success: false,
+            message: "Saved login credentials కనిపించలేదు."
+        };
+    }
+
+    // 3. Username, Password నింపాలి.
+    const fillResult = fillLoginDetails(
+        login.username,
+        login.password
+    );
+
+    if (!fillResult.success) {
+        return fillResult;
+    }
+
+    // 4. Fields మళ్లీ గుర్తించాలి.
+    fields = getVisibleLoginFields();
+
+    if (!fields.username || !fields.password) {
+        return {
+            success: false,
+            message: "Username లేదా Password field కనిపించలేదు."
+        };
+    }
+
+    // 5. Input events పంపాలి.
+    for (const field of [fields.username, fields.password]) {
+        field.dispatchEvent(
+            new Event("input", { bubbles: true })
+        );
+
+        field.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+    }
+
+    console.log("[IRCTC Login] Credentials filled.");
+
+    // 6. CAPTCHA / OTP ఉంటే ఆపాలి.
+    if (hasCaptchaOrOtp()) {
+        return {
+            success: false,
+            message: "CAPTCHA లేదా OTP పూర్తి చేసి Auto-Fill మళ్లీ నొక్కండి."
+        };
+    }
+
+    // 7. సరైన Login form‌లోని SIGN IN button గుర్తించాలి.
+    const loginButton = findLoginSubmitButton();
+
+    if (!loginButton) {
+        return {
+            success: false,
+            message: "SIGN IN button కనిపించలేదు."
+        };
+    }
+
+    const loginForm = loginButton.closest("form");
+
+    if (!loginForm) {
+        return {
+            success: false,
+            message: "Login form కనిపించలేదు."
+        };
+    }
+
+    console.log("[IRCTC Login] SIGN IN button:", loginButton);
+    console.log("[IRCTC Login] Form:", loginForm);
+
+    // 8. Autofill తర్వాత 50ms వేచి ఉండాలి.
+    await sleep(50);
+
+    // 9. Button ఇంకా అందుబాటులో ఉందో తనిఖీ చేయాలి.
+    if (
+        !loginButton.isConnected ||
+        !isElementVisible(loginButton) ||
+        loginButton.disabled
+    ) {
+        return {
+            success: false,
+            message: "SIGN IN button ప్రస్తుతం అందుబాటులో లేదు."
+        };
+    }
+
+    // 10. SIGN IN click చేయాలి.
+    console.log("[IRCTC Login] Clicking SIGN IN using jQuery.");
+
+    const signInButton = loginButton.closest("form")
+        ?.querySelector("button.train_Search_custom_hover[type='submit']");
+
+    if (signInButton && window.jQuery) {
+        window.jQuery(signInButton).click();
+    } else if (signInButton) {
+        signInButton.click();
+    } else {
+        console.warn("[IRCTC Login] SIGN IN button not found.");
+    }
+
+    //loginButton.click();
+
+    // 11. Login response కోసం వేచి ఉండాలి.
+    await sleep(1500);
+
+    console.log(
+        "[IRCTC Login] Login fields after click:",
+        getVisibleLoginFields()
+    );
+
+    console.log(
+        "[IRCTC Login] CAPTCHA/OTP detected:",
+        hasCaptchaOrOtp()
+    );
+
+    // 12. గరిష్ఠంగా 10 సెకన్లు Login status తనిఖీ చేయాలి.
+    for (let attempt = 0; attempt < 50; attempt++) {
+        await sleep(200);
+
+        if (isIrctcLoggedIn()) {
+            return {
+                success: true,
+                message: "IRCTC login విజయవంతమైంది."
+            };
+        }
+
+        if (hasCaptchaOrOtp()) {
+            return {
+                success: false,
+                message: "CAPTCHA లేదా OTP పూర్తి చేసి Auto-Fill మళ్లీ నొక్కండి."
+            };
+        }
+    }
+
+    return {
+        success: false,
+        message: "Login విజయవంతమైందో నిర్ధారించలేకపోయాం."
+    };
+}
+
+
+
+
 // ======================================================
 // PASSENGER DETAILS AUTOFILL
 // ======================================================
@@ -618,8 +996,7 @@ async function fillJourneyDate(value) {
         success: actualValue === date,
         message: actualValue === date
             ? `Journey Date ఎంపిక చేయబడింది: ${date}`
-            : `తేదీ నిర్ధారణ విఫలమైంది. ప్రస్తుతం: ${
-                actualValue || "ఖాళీ"
+            : `తేదీ నిర్ధారణ విఫలమైంది. ప్రస్తుతం: ${actualValue || "ఖాళీ"
             }`
     };
 }
@@ -813,10 +1190,9 @@ async function selectIrctcDropdown(selector, requestedValue) {
             success: false,
             message:
                 `"${requested}" ఎంపిక ${selector} dropdownలో కనిపించలేదు. ` +
-                `కనిపించినవి: ${
-                    options.map(option =>
-                        option.innerText.trim()
-                    ).join(", ") || "ఏవీ లేవు"
+                `కనిపించినవి: ${options.map(option =>
+                    option.innerText.trim()
+                ).join(", ") || "ఏవీ లేవు"
                 }`
         };
     }
@@ -831,8 +1207,7 @@ async function selectIrctcDropdown(selector, requestedValue) {
         success: verified,
         message: verified
             ? `${updatedValue} ఎంపిక చేయబడింది.`
-            : `${requested} ఎంపిక నిర్ధారణ కాలేదు. ప్రస్తుతం: ${
-                updatedValue || "తెలియదు"
+            : `${requested} ఎంపిక నిర్ధారణ కాలేదు. ప్రస్తుతం: ${updatedValue || "తెలియదు"
             }`
     };
 }
@@ -1109,6 +1484,7 @@ chrome.runtime.onMessage.addListener(
         }
 
 
+
         if (message.action === "FILL_BOOKING") {
             if (bookingAutofillRunning) {
                 sendResponse({
@@ -1119,35 +1495,41 @@ chrome.runtime.onMessage.addListener(
                 return;
             }
 
-            bookingAutofillRunning = true;
-
             (async () => {
                 try {
+                    // ముందుగా login status తనిఖీ చేయాలి.
+                    const loginResult = await ensureIrctcLogin(
+                        message.login
+                    );
+
+                    if (!loginResult.success) {
+                        sendResponse(loginResult);
+                        return;
+                    }
+
+                    // Login నిర్ధారణ అయిన తర్వాత మాత్రమే booking ప్రారంభించాలి.
+                    bookingAutofillRunning = true;
+
                     const result = await fillBookingDetails(
                         message.booking
                     );
 
                     sendResponse(result);
                 } catch (error) {
-                    console.error(
-                        "IRCTC booking autofill error:",
-                        error
-                    );
+                    console.error("IRCTC autofill error:", error);
 
                     sendResponse({
                         success: false,
-                        message:
-                            "Booking Autofillలో లోపం వచ్చింది. " +
-                            "Consoleలో వివరాలను తనిఖీ చేయండి."
+                        message: "Login లేదా Booking Auto-Fillలో లోపం వచ్చింది."
                     });
                 } finally {
-                    // విజయవంతమైనా, విఫలమైనా user interaction‌ను తిరిగి అనుమతించాలి.
                     bookingAutofillRunning = false;
                 }
             })();
 
             return true;
         }
+
 
     }
 );
