@@ -194,35 +194,6 @@ const PageAwareAutofill = (() => {
         };
     }
 
-    // --------------------------------------------------
-    // BOOKING PAGE HANDLER
-    // --------------------------------------------------
-
-    async function handleBookingPageAutofill(message) {
-        const booking = message.booking || {};
-
-        if (
-            !booking.fromStation ||
-            !booking.toStation ||
-            !booking.journeyDate
-        ) {
-            return {
-                success: false,
-                pageType: "booking",
-                message: "Journey details incompleteగా ఉన్నాయి."
-            };
-        }
-
-        // Delegate to the existing booking flow.
-        // Do not duplicate fillBookingDetails() here.
-        return {
-            success: false,
-            pageType: "booking",
-            action: "START_BACKGROUND_AUTOFILL",
-            message:
-                "Booking flow‌ను background dispatcher ద్వారా ప్రారంభించాలి."
-        };
-    }
 
     // --------------------------------------------------
     // TRAIN LIST PAGE HANDLER
@@ -349,15 +320,33 @@ const PageAwareAutofill = (() => {
     // PASSENGER PAGE HANDLER
     // --------------------------------------------------
 
+
+
     async function handlePassengerPageAutofill(message) {
-        const booking = message.booking || {};
+        const passengerDetails =
+            message?.passengerDetails ||
+            message?.booking?.passengerDetails ||
+            {};
 
-        const passenger =
-            booking.passengers?.[0] ||
-            booking.passenger ||
-            message.passenger;
+        let passengers = Array.isArray(passengerDetails.passengers)
+            ? passengerDetails.passengers
+            : [];
 
-        if (!passenger) {
+        // Backward compatibility for older record structures.
+        if (passengers.length === 0) {
+            if (Array.isArray(message?.booking?.passengers)) {
+                passengers = message.booking.passengers;
+            } else if (message?.booking?.passenger) {
+                passengers = [message.booking.passenger];
+            } else if (message?.passenger) {
+                passengers = [message.passenger];
+            }
+        }
+
+        const contactDetails =
+            passengerDetails.contactDetails || {};
+
+        if (passengers.length === 0) {
             return {
                 success: false,
                 pageType: "passenger",
@@ -369,17 +358,27 @@ const PageAwareAutofill = (() => {
             return {
                 success: false,
                 pageType: "passenger",
-                message: "Existing passenger autofill method అందుబాటులో లేదు."
+                message: "Passenger autofill function అందుబాటులో లేదు."
             };
         }
 
-        const result = fillPassengerDetails(passenger);
+        const result = await Promise.resolve(
+            fillPassengerDetails({
+                passengers,
+                contactDetails
+            })
+        );
 
         return {
             ...result,
-            pageType: "passenger"
+            pageType: "passenger",
+            passengersAvailable: passengers.length,
+            contactDetailsAvailable:
+                Object.keys(contactDetails).length > 0
         };
     }
+
+
 
     // --------------------------------------------------
     // PAGE-AWARE DISPATCHER
@@ -471,3 +470,131 @@ chrome.runtime.onMessage.addListener(
         }
     }
 );
+
+
+(() => {
+    let lastProcessedUrl = "";
+    let processing = false;
+
+    const sleep = ms =>
+        new Promise(resolve => setTimeout(resolve, ms));
+
+    function isPassengerPage() {
+        return /psgninput|passenger-details/i.test(location.href);
+    }
+
+    function passengerFormReady() {
+        return Boolean(document.querySelector(
+            'input[formcontrolname="passengerName"], ' +
+            'input[name*="passengerName" i], ' +
+            'input[placeholder*="name" i]'
+        ));
+    }
+
+    async function tryPendingPassengerAutofill() {
+        const url = location.href;
+
+        if (!isPassengerPage()) {
+            return;
+        }
+
+        if (processing || lastProcessedUrl === url) {
+            return;
+        }
+
+        processing = true;
+
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: "GET_PENDING_AUTOFILL"
+            });
+
+            if (!response?.success || !response.pending) {
+                return;
+            }
+
+            const pending = response.pending;
+
+            const passengerDetails =
+                pending.passengerDetails ||
+                pending.booking?.passengerDetails ||
+                {};
+
+            const passengers = Array.isArray(passengerDetails.passengers)
+                ? passengerDetails.passengers
+                : Array.isArray(pending.booking?.passengers)
+                    ? pending.booking.passengers
+                    : pending.booking?.passenger
+                        ? [pending.booking.passenger]
+                        : [];
+
+            if (passengers.length === 0) {
+                console.warn(
+                    "[IRCTC Passenger] Pending recordలో passengers లేరు."
+                );
+                return;
+            }
+
+            // Angular passenger form render అయ్యే వరకు వేచి ఉండాలి.
+            const deadline = Date.now() + 15000;
+
+            while (
+                Date.now() < deadline &&
+                !passengerFormReady()
+            ) {
+                await sleep(300);
+            }
+
+            if (!passengerFormReady()) {
+                console.warn(
+                    "[IRCTC Passenger] Passenger form 15 seconds‌లో load కాలేదు."
+                );
+                return;
+            }
+
+            // IMPORTANT:
+            // handlePassengerPageAutofill private function‌ను నేరుగా
+            // call చేయకూడదు. Public PageAwareAutofill API వాడాలి.
+            const result =
+                await PageAwareAutofill.handlePageAwareAutofill({
+                    passengerDetails,
+                    booking: pending.booking,
+                    login: pending.login
+                });
+
+            console.log(
+                "[IRCTC Passenger] Pending autofill result:",
+                result
+            );
+
+            if (result?.success) {
+                lastProcessedUrl = url;
+
+                await chrome.runtime.sendMessage({
+                    action: "CLEAR_PENDING_AUTOFILL"
+                });
+
+                console.log(
+                    "[IRCTC Passenger] Passenger autofill successful. " +
+                    "Pending data cleared."
+                );
+            } else {
+                console.warn(
+                    "[IRCTC Passenger] Autofill incomplete. " +
+                    "Pending data retained for retry.",
+                    result
+                );
+            }
+        } catch (error) {
+            console.error(
+                "[IRCTC Passenger] Pending autofill failed:",
+                error
+            );
+        } finally {
+            processing = false;
+        }
+    }
+
+    // IRCTCలో page navigation/Angular rendering ఆలస్యమైనా retry చేయాలి.
+    setInterval(tryPendingPassengerAutofill, 1000);
+})();

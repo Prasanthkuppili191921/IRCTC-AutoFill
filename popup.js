@@ -288,20 +288,14 @@ async function deleteRecord(recordId) {
 }
 
 // Send the selected journey to the background autofill flow.
+
 async function autoFillRecord(record) {
     const booking = getBookingDetails(record);
 
-    if (
-        !booking.fromStation ||
-        !booking.toStation ||
-        !booking.journeyDate
-    ) {
-        showStatus(
-            "Journey details are incomplete. Edit the record first.",
-            "error"
-        );
-        return;
-    }
+    const passengerDetails =
+        record?.passengerDetails ||
+        booking?.passengerDetails ||
+        {};
 
     try {
         const tabs = await chrome.tabs.query({
@@ -312,10 +306,8 @@ async function autoFillRecord(record) {
         const activeTab = tabs[0];
 
         if (
-            !activeTab ||
-            !activeTab.id ||
-            !activeTab.url ||
-            !activeTab.url.startsWith(
+            !activeTab?.id ||
+            !activeTab.url?.startsWith(
                 "https://www.irctc.co.in/"
             )
         ) {
@@ -326,36 +318,44 @@ async function autoFillRecord(record) {
             return;
         }
 
-        // Send the request to the background script.
         chrome.runtime.sendMessage(
             {
                 action: "START_BACKGROUND_AUTOFILL",
                 login: record?.login || {},
-                booking
+                booking,
+                passengerDetails
             },
             response => {
                 if (chrome.runtime.lastError) {
                     console.error(
-                        "Auto-Fill error:",
+                        "[IRCTC AutoFill] Error:",
                         chrome.runtime.lastError.message
                     );
                     return;
                 }
 
-                if (!response || !response.success) {
+                if (!response?.success) {
                     console.error(
-                        "Auto-Fill could not start:",
+                        "[IRCTC AutoFill] Failed:",
                         response?.message || "Unknown error"
+                    );
+                } else {
+                    console.log(
+                        "[IRCTC AutoFill] Result:",
+                        response
                     );
                 }
             }
         );
 
-        // Close the extension popup immediately.
+        // Request పంపిన తర్వాత popup మూసివేయాలి.
         window.close();
 
     } catch (error) {
-        console.error("Auto-Fill failed:", error);
+        console.error(
+            "[IRCTC AutoFill] Failed to start:",
+            error
+        );
 
         showStatus(
             "Auto-Fill failed. Please try again.",
@@ -363,6 +363,7 @@ async function autoFillRecord(record) {
         );
     }
 }
+
 
 // Display a message using the existing #status element.
 function showStatus(message, type = "") {

@@ -825,20 +825,7 @@ chrome.runtime.onMessage.addListener(
                         message.booking
                     );
 
-                    // Booking autofill విజయవంతమైతే pending details తొలగించాలి.
-                    if (result?.success) {
-                        try {
-                            await chrome.runtime.sendMessage({
-                                action: "CLEAR_PENDING_AUTOFILL"
-                            });
-                        } catch (error) {
-                            console.warn(
-                                "[IRCTC AutoFill] Pending details clear కాలేదు:",
-                                error
-                            );
-                        }
-                    }
-
+                    // Passenger page‌లో autofill పూర్తయ్యే వరకు pending data ఉంచాలి.
                     sendResponse(result);
                 } catch (error) {
                     console.error("IRCTC autofill error:", error);
@@ -865,6 +852,10 @@ chrome.runtime.onMessage.addListener(
 let pendingBookingResumeStarted = false;
 
 async function resumePendingBookingAutofill() {
+    // Passenger page‌ను booking-form resume logic process చేయకూడదు.
+    if (/psgninput|passenger-details/i.test(location.href)) {
+        return;
+    }
     if (pendingBookingResumeStarted) {
         return;
     }
@@ -954,14 +945,12 @@ async function resumePendingBookingAutofill() {
             );
 
             if (result?.success) {
-                await chrome.runtime.sendMessage({
-                    action: "CLEAR_PENDING_AUTOFILL"
-                });
-
                 console.log(
-                    "[IRCTC AutoFill] Pending booking cleared."
+                    "[IRCTC AutoFill] Booking autofill completed. " +
+                    "Pending passenger details retained."
                 );
-            } else {
+            }
+            else {
                 console.error(
                     "[IRCTC AutoFill] Booking autofill failed:",
                     result?.message,

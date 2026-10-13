@@ -14,6 +14,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "START_BACKGROUND_AUTOFILL") {
         const login = message.login || {};
         const booking = message.booking || {};
+        const passengerDetails =
+            message.passengerDetails ||
+            booking.passengerDetails ||
+            {};
 
         chrome.tabs.query(
             { active: true, lastFocusedWindow: true },
@@ -111,6 +115,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                     tabId: tab.id,
                                     login,
                                     booking,
+                                    passengerDetails,
                                     createdAt: Date.now()
                                 }
                             });
@@ -136,6 +141,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // TRAIN LIST PAGE
                         // --------------------------
                         case "train-list": {
+                            await chrome.storage.session.set({
+                                [PENDING_KEY]: {
+                                    tabId: tab.id,
+                                    login,
+                                    booking,
+                                    passengerDetails,
+                                    createdAt: Date.now()
+                                }
+                            });
+
                             result = await chrome.tabs.sendMessage(tab.id, {
                                 action: "PAGE_AWARE_AUTOFILL",
                                 login,
@@ -156,36 +171,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // --------------------------
                         // PASSENGER DETAILS PAGE
                         // --------------------------
-                        case "passenger": {
-                            const passenger =
-                                booking.passengers?.[0] ||
-                                booking.passenger ||
-                                message.passenger;
 
-                            if (!passenger) {
+                        case "passenger": {
+                            const passengers = Array.isArray(
+                                passengerDetails.passengers
+                            )
+                                ? passengerDetails.passengers
+                                : [];
+
+                            if (passengers.length === 0) {
                                 sendResponse({
                                     success: false,
-                                    pageType,
-                                    message: "Saved passenger details లేవు."
+                                    pageType: "passenger",
+                                    message:
+                                        "Saved passenger details లేవు. " +
+                                        "Recordలో Passenger Details save చేయండి."
                                 });
+
                                 return;
                             }
 
-                            result = await chrome.tabs.sendMessage(tab.id, {
-                                action: "FILL_PASSENGER",
-                                passenger
-                            });
+                            const result = await chrome.tabs.sendMessage(
+                                tab.id,
+                                {
+                                    action: "PAGE_AWARE_AUTOFILL",
+                                    login,
+                                    booking,
+                                    passengerDetails
+                                }
+                            );
 
                             sendResponse({
                                 ...(result || {
                                     success: false,
-                                    message: "Passenger autofill నుంచి స్పందన రాలేదు."
+                                    message:
+                                        "Passenger page నుంచి response రాలేదు."
                                 }),
-                                pageType
+                                pageType: "passenger"
                             });
 
                             return;
                         }
+
 
                         // --------------------------
                         // UNSUPPORTED PAGE
