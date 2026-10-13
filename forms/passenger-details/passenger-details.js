@@ -305,7 +305,7 @@
         passengerList.appendChild(card);
 
         setFieldValues(card, {
-            [`passengerName_${passengerId}`]: data.name ?? "",
+            [`passengerName_${passengerId}`]: data.name ?? data.fullName ?? data.passengerName ?? "",
             [`passengerAge_${passengerId}`]: data.age ?? "",
             [`passengerGender_${passengerId}`]: data.gender ?? "",
             [`passengerNationality_${passengerId}`]: data.nationality ?? "IN",
@@ -332,11 +332,11 @@
                         element.name.startsWith(`${prefix}_`)
                     );
 
-                return field?.value ?? "";
+                return field?.value?.trim() ?? "";
             };
 
             return {
-                name: getValue("passengerName").trim(),
+                name: getValue("passengerName"),
                 age: getValue("passengerAge"),
                 gender: getValue("passengerGender"),
                 nationality: getValue("passengerNationality"),
@@ -347,8 +347,7 @@
         return {
             passengers,
             contactDetails: {
-                mobileNumber: mobileNumber.value.trim(),
-                emailAddress: emailAddress.value.trim()
+                mobileNumber: mobileNumber.value.trim()
             }
         };
     }
@@ -372,10 +371,14 @@
             addPassenger();
         }
 
+        // Support both the current and older record structures.
         const contact = data.contactDetails || {};
 
-        mobileNumber.value = contact.mobileNumber || "";
-        emailAddress.value = contact.emailAddress || "";
+        mobileNumber.value =
+            String(contact.mobileNumber ?? data.mobileNumber ?? "")
+                .replace(/^\+?91[\s-]?/, "")
+                .replace(/\D/g, "")
+                .slice(0, 10);
 
         renumberPassengers();
         requestAnimationFrame(notifyContentHeight);
