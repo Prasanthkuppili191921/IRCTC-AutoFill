@@ -17,7 +17,8 @@
       ],
       "js": [
         "content/content-1.js",
-        "content/content-2.js"
+        "content/content-2.js",
+        "content/content-3.js"
       ],
       "run_at": "document_idle"
     }

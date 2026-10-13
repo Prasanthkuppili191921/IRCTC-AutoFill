@@ -1,4 +1,5 @@
-﻿"use strict";
+﻿
+"use strict";
 
 const PENDING_KEY = "pendingIrctcAutofill";
 
@@ -7,18 +8,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
     }
 
-    // Auto Fill ప్రారంభం
+    // ==========================================
+    // PAGE-AWARE AUTOFILL
+    // ==========================================
     if (message.action === "START_BACKGROUND_AUTOFILL") {
         const login = message.login || {};
-        const booking = message.booking;
-
-        if (!booking) {
-            sendResponse({
-                success: false,
-                message: "Booking details ఇవ్వలేదు."
-            });
-            return;
-        }
+        const booking = message.booking || {};
 
         chrome.tabs.query(
             { active: true, lastFocusedWindow: true },
@@ -37,34 +32,185 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
 
                 try {
-                    // Login/navigation సమయంలో booking details కోల్పోకుండా save చేయాలి.
-                    await chrome.storage.session.set({
-                        [PENDING_KEY]: {
-                            tabId: tab.id,
-                            login,
-                            booking,
-                            createdAt: Date.now()
+                    // Step 1: ప్రస్తుతం ఉన్న IRCTC page గుర్తించాలి.
+                    const detection = await chrome.tabs.sendMessage(tab.id, {
+                        action: "PAGE_AWARE_DETECT"
+                    });
+
+                    if (!detection?.success || !detection.context?.pageType) {
+                        sendResponse({
+                            success: false,
+                            message: "IRCTC page‌ను గుర్తించలేకపోయాం."
+                        });
+                        return;
+                    }
+
+                    const pageType = detection.context.pageType;
+                    let result;
+
+                    console.log(
+                        "[IRCTC Autofill] Active page:",
+                        pageType
+                    );
+
+                    // Step 2: గుర్తించిన page‌కు సంబంధించిన
+                    // functionality మాత్రమే execute చేయాలి.
+                    switch (pageType) {
+
+                        // --------------------------
+                        // LOGIN PAGE
+                        // --------------------------
+                        case "login": {
+                            if (!login.username || !login.password) {
+                                sendResponse({
+                                    success: false,
+                                    pageType,
+                                    message: "Saved login credentials లేవు."
+                                });
+                                return;
+                            }
+
+                            result = await chrome.tabs.sendMessage(tab.id, {
+                                action: "FILL_LOGIN",
+                                username: login.username,
+                                password: login.password
+                            });
+
+                            sendResponse({
+                                ...(result || {
+                                    success: false,
+                                    message: "Login autofill నుంచి స్పందన రాలేదు."
+                                }),
+                                pageType
+                            });
+
+                            return;
                         }
-                    });
 
-                    const result = await chrome.tabs.sendMessage(tab.id, {
-                        action: "FILL_BOOKING",
-                        login,
-                        booking
-                    });
+                        // --------------------------
+                        // BOOKING / JOURNEY PAGE
+                        // --------------------------
+                        case "booking": {
+                            if (
+                                !booking.fromStation ||
+                                !booking.toStation ||
+                                !booking.journeyDate
+                            ) {
+                                sendResponse({
+                                    success: false,
+                                    pageType,
+                                    message: "Journey details incompleteగా ఉన్నాయి."
+                                });
+                                return;
+                            }
 
-                    sendResponse(result || {
-                        success: false,
-                        message: "IRCTC నుంచి స్పందన రాలేదు."
-                    });
+                            // Existing pending/resume functionality
+                            // booking flow కోసం మాత్రమే ఉంచాలి.
+                            await chrome.storage.session.set({
+                                [PENDING_KEY]: {
+                                    tabId: tab.id,
+                                    login,
+                                    booking,
+                                    createdAt: Date.now()
+                                }
+                            });
+
+                            result = await chrome.tabs.sendMessage(tab.id, {
+                                action: "FILL_BOOKING",
+                                login,
+                                booking
+                            });
+
+                            sendResponse({
+                                ...(result || {
+                                    success: false,
+                                    message: "Booking autofill నుంచి స్పందన రాలేదు."
+                                }),
+                                pageType
+                            });
+
+                            return;
+                        }
+
+                        // --------------------------
+                        // TRAIN LIST PAGE
+                        // --------------------------
+                        case "train-list": {
+                            result = await chrome.tabs.sendMessage(tab.id, {
+                                action: "PAGE_AWARE_AUTOFILL",
+                                login,
+                                booking
+                            });
+
+                            sendResponse({
+                                ...(result || {
+                                    success: false,
+                                    message: "Train selection నుంచి స్పందన రాలేదు."
+                                }),
+                                pageType
+                            });
+
+                            return;
+                        }
+
+                        // --------------------------
+                        // PASSENGER DETAILS PAGE
+                        // --------------------------
+                        case "passenger": {
+                            const passenger =
+                                booking.passengers?.[0] ||
+                                booking.passenger ||
+                                message.passenger;
+
+                            if (!passenger) {
+                                sendResponse({
+                                    success: false,
+                                    pageType,
+                                    message: "Saved passenger details లేవు."
+                                });
+                                return;
+                            }
+
+                            result = await chrome.tabs.sendMessage(tab.id, {
+                                action: "FILL_PASSENGER",
+                                passenger
+                            });
+
+                            sendResponse({
+                                ...(result || {
+                                    success: false,
+                                    message: "Passenger autofill నుంచి స్పందన రాలేదు."
+                                }),
+                                pageType
+                            });
+
+                            return;
+                        }
+
+                        // --------------------------
+                        // UNSUPPORTED PAGE
+                        // --------------------------
+                        default:
+                            sendResponse({
+                                success: false,
+                                pageType: "unsupported",
+                                message:
+                                    "ఈ IRCTC page‌కు AutoFill support లేదు."
+                            });
+
+                            return;
+                    }
                 } catch (error) {
-                    console.error("START_BACKGROUND_AUTOFILL error:", error);
+                    console.error(
+                        "START_BACKGROUND_AUTOFILL error:",
+                        error
+                    );
 
                     sendResponse({
                         success: false,
                         message:
                             "IRCTC content script‌తో కనెక్షన్ విఫలమైంది. " +
-                            "పేజీ Reload అయిన తర్వాత మళ్లీ ప్రయత్నించండి."
+                            "Extension Reload చేసి మళ్లీ ప్రయత్నించండి."
                     });
                 }
             }
@@ -73,13 +219,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // Content script page load తర్వాత pending details అడిగినప్పుడు
+    // ==========================================
+    // GET PENDING AUTOFILL
+    // Existing functionality preserved
+    // ==========================================
     if (message.action === "GET_PENDING_AUTOFILL") {
         chrome.storage.session.get(PENDING_KEY)
             .then((data) => {
                 const pending = data[PENDING_KEY];
 
-                // అదే tab కోసం ఉన్న details మాత్రమే ఇవ్వాలి.
                 if (
                     pending &&
                     sender.tab?.id === pending.tabId
@@ -97,6 +245,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             })
             .catch((error) => {
                 console.error("GET_PENDING_AUTOFILL error:", error);
+
                 sendResponse({
                     success: false,
                     pending: null
@@ -106,7 +255,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // Booking autofill పూర్తయిన తర్వాత pending details తొలగించాలి
+    // ==========================================
+    // CLEAR PENDING AUTOFILL
+    // Existing functionality preserved
+    // ==========================================
     if (message.action === "CLEAR_PENDING_AUTOFILL") {
         chrome.storage.session.get(PENDING_KEY)
             .then(async (data) => {
