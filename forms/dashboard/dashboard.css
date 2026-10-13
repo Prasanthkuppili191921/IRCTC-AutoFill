@@ -216,3 +216,34 @@ body {
 		border-radius: 12px;
 	}
 }
+
+
+
+
+/* ========================================
+   Passenger Details Frame
+======================================== */
+
+#passengerDetailsFrame {
+	display: block;
+	width: 100%;
+	height: 700px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 16px;
+	background: #ffffff;
+	overflow: hidden;
+}
+
+/* Dynamic height is controlled by dashboard.js */
+@media (max-width: 480px) {
+	#passengerDetailsFrame {
+		border-radius: 12px;
+	}
+}
+
+
+
+
+

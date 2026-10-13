@@ -1,5 +1,4 @@
-﻿
-"use strict";
+﻿"use strict";
 
 const RECORDS_STORAGE_KEY = "bookingRecords";
 
@@ -9,19 +8,30 @@ document.addEventListener("DOMContentLoaded", initializeDashboard);
 async function initializeDashboard() {
     const loginFrame = document.getElementById("loginFrame");
     const bookingFrame = document.getElementById("bookingFrame");
+
     const trainSelectionFrame =
         document.getElementById("trainSelectionFrame");
 
-    const saveButton = document.getElementById("saveDetailsButton");
-    const loadButton = document.getElementById("loadJsonButton");
-    const statusElement = document.getElementById("dashboardStatus");
+    const passengerDetailsFrame =
+        document.getElementById("passengerDetailsFrame");
+
+    const saveButton =
+        document.getElementById("saveDetailsButton");
+
+    const loadButton =
+        document.getElementById("loadJsonButton");
+
+    const statusElement =
+        document.getElementById("dashboardStatus");
 
     let editingRecordId =
         new URLSearchParams(window.location.search).get("id");
 
     let isSaving = false;
     let isLoading = false;
+
     let previousBookingFrameHeight = "";
+
 
     function showStatus(message, type = "") {
         statusElement.textContent = "";
@@ -73,11 +83,39 @@ async function initializeDashboard() {
         }
     });
 
+    // ========================================
+    // Passenger Details - Dynamic Iframe Height
+    // ========================================
+
+    window.addEventListener("message", function (event) {
+        if (event.origin !== window.location.origin) {
+            return;
+        }
+
+        if (event.source !== passengerDetailsFrame.contentWindow) {
+            return;
+        }
+
+        if (event.data?.type !== "PASSENGER_DETAILS_HEIGHT") {
+            return;
+        }
+
+        const height = Number(event.data.height);
+
+        if (!Number.isFinite(height) || height <= 0) {
+            return;
+        }
+
+        passengerDetailsFrame.style.height = `${height}px`;
+    });
+
 
     function waitForFrame(frame) {
         if (!frame) {
             return Promise.reject(
-                new Error("A required Dashboard iframe was not found.")
+                new Error(
+                    "A required Dashboard iframe was not found."
+                )
             );
         }
 
@@ -86,7 +124,11 @@ async function initializeDashboard() {
         }
 
         return new Promise((resolve, reject) => {
-            frame.addEventListener("load", resolve, { once: true });
+            frame.addEventListener(
+                "load",
+                resolve,
+                { once: true }
+            );
 
             frame.addEventListener(
                 "error",
@@ -116,8 +158,11 @@ async function initializeDashboard() {
         const doc = getFrameDocument(trainSelectionFrame);
 
         const fields = {
-            trainNumber: doc.getElementById("preferredTrainNumber"),
-            trainName: doc.getElementById("preferredTrainName")
+            trainNumber:
+                doc.getElementById("preferredTrainNumber"),
+
+            trainName:
+                doc.getElementById("preferredTrainName")
         };
 
         if (!fields.trainNumber || !fields.trainName) {
@@ -144,8 +189,34 @@ async function initializeDashboard() {
     function populateTrainSelection(value = {}) {
         const fields = getTrainSelectionFields();
 
-        fields.trainNumber.value = value.trainNumber || "";
-        fields.trainName.value = value.trainName || "";
+        fields.trainNumber.value =
+            value.trainNumber || "";
+
+        fields.trainName.value =
+            value.trainName || "";
+    }
+
+
+    // Passenger Details form API.
+    function getPassengerDetailsForm() {
+        const passengerWindow =
+            passengerDetailsFrame?.contentWindow;
+
+        const passengerForm =
+            passengerWindow?.PassengerDetailsForm;
+
+        if (
+            !passengerForm ||
+            typeof passengerForm.getData !== "function" ||
+            typeof passengerForm.setData !== "function"
+        ) {
+            throw new Error(
+                "Passenger Details integration is unavailable. " +
+                "Check passenger-details.js."
+            );
+        }
+
+        return passengerForm;
     }
 
 
@@ -155,18 +226,24 @@ async function initializeDashboard() {
         await Promise.all([
             waitForFrame(loginFrame),
             waitForFrame(bookingFrame),
-            waitForFrame(trainSelectionFrame)
+            waitForFrame(trainSelectionFrame),
+            waitForFrame(passengerDetailsFrame)
         ]);
 
-        const loginDoc = getFrameDocument(loginFrame);
-        const bookingDoc = getFrameDocument(bookingFrame);
+        const loginDoc =
+            getFrameDocument(loginFrame);
+
+        const bookingDoc =
+            getFrameDocument(bookingFrame);
 
         // Validate Login form.
         if (
             !loginDoc.getElementById("username") ||
             !loginDoc.getElementById("password")
         ) {
-            throw new Error("Login form fields were not found.");
+            throw new Error(
+                "Login form fields were not found."
+            );
         }
 
         // Validate Journey Details form.
@@ -175,26 +252,54 @@ async function initializeDashboard() {
             !bookingDoc.getElementById("toStation") ||
             !bookingDoc.getElementById("journeyDate")
         ) {
-            throw new Error("Journey form fields were not found.");
+            throw new Error(
+                "Journey form fields were not found."
+            );
         }
 
         // Validate Train Selection form.
         getTrainSelectionFields();
 
+        // Validate Passenger Details form.
+        const passengerDoc =
+            getFrameDocument(passengerDetailsFrame);
+
+        if (
+            !passengerDoc.getElementById(
+                "passengerDetailsForm"
+            )
+        ) {
+            throw new Error(
+                "Passenger Details form was not found."
+            );
+        }
+
+        getPassengerDetailsForm();
+
         if (editingRecordId) {
             await loadExistingRecord(editingRecordId);
         }
 
-        saveButton.addEventListener("click", saveAllDetails);
+        saveButton.addEventListener(
+            "click",
+            saveAllDetails
+        );
 
         if (loadButton) {
-            loadButton.addEventListener("click", loadJsonRecords);
+            loadButton.addEventListener(
+                "click",
+                loadJsonRecords
+            );
         }
 
     } catch (error) {
-        console.error("Dashboard initialization failed:", error);
+        console.error(
+            "Dashboard initialization failed:",
+            error
+        );
 
         showStatus(error.message, "error");
+
         saveButton.disabled = true;
 
         if (loadButton) {
@@ -203,26 +308,38 @@ async function initializeDashboard() {
     }
 
 
+    // Load an existing record into every form.
     async function loadExistingRecord(recordId) {
         const result = await chrome.storage.local.get(
             RECORDS_STORAGE_KEY
         );
 
-        const records = Array.isArray(result[RECORDS_STORAGE_KEY])
+        const records = Array.isArray(
+            result[RECORDS_STORAGE_KEY]
+        )
             ? result[RECORDS_STORAGE_KEY]
             : [];
 
-        const record = records.find(item => item.id === recordId);
+        const record = records.find(
+            item => item.id === recordId
+        );
 
         if (!record) {
-            throw new Error("Saved record was not found.");
+            throw new Error(
+                "Saved record was not found."
+            );
         }
 
-        const loginDoc = getFrameDocument(loginFrame);
-        const bookingDoc = getFrameDocument(bookingFrame);
+        const loginDoc =
+            getFrameDocument(loginFrame);
+
+        const bookingDoc =
+            getFrameDocument(bookingFrame);
 
         const login = record.login || {};
-        const booking = record.booking || record;
+
+        const booking =
+            record.booking || record;
 
         // Restore Login fields.
         loginDoc.getElementById("username").value =
@@ -241,7 +358,8 @@ async function initializeDashboard() {
         const dateInput =
             bookingDoc.getElementById("journeyDate");
 
-        dateInput.value = normalizeDate(booking.journeyDate);
+        dateInput.value =
+            normalizeDate(booking.journeyDate);
 
         bookingDoc.getElementById("travelClass").value =
             booking.travelClass ?? "";
@@ -258,8 +376,11 @@ async function initializeDashboard() {
             booking.personWithDisabilityConcession
         );
 
-        bookingDoc.getElementById("railwayPassConcession").checked =
-            Boolean(booking.railwayPassConcession);
+        bookingDoc.getElementById(
+            "railwayPassConcession"
+        ).checked = Boolean(
+            booking.railwayPassConcession
+        );
 
         dateInput.dispatchEvent(
             new Event("input", { bubbles: true })
@@ -272,46 +393,63 @@ async function initializeDashboard() {
             {};
 
         populateTrainSelection(trainSelection);
+
+        // Restore Passenger Details.
+        // Older records may not contain passengerDetails.
+        const passengerForm =
+            getPassengerDetailsForm();
+
+        passengerForm.setData(
+            record.passengerDetails || {}
+        );
     }
 
 
+    // Import records from JSON and load a selected record.
     async function loadJsonRecords() {
         if (isLoading || isSaving) {
             return;
         }
 
         isLoading = true;
+
         loadButton.disabled = true;
         loadButton.textContent = "Loading...";
+
         showStatus("");
 
         try {
-            // Open JSON file picker and read the selected file.
-            const records = await RecordStorage.readRecords();
+            const records =
+                await RecordStorage.readRecords();
 
             if (records.length === 0) {
                 await chrome.storage.local.set({
                     [RECORDS_STORAGE_KEY]: []
                 });
 
-                showStatus("JSON file contains no records.", "success");
+                showStatus(
+                    "JSON file contains no records.",
+                    "success"
+                );
+
                 return;
             }
 
-            // Import JSON records into extension storage.
+            // Preserve the existing JSON import behavior.
             await chrome.storage.local.set({
                 [RECORDS_STORAGE_KEY]: records
             });
 
-            // Let the user select a record to display.
-            const options = records.map((record, index) => {
-                const label =
-                    record.name ||
-                    record.id ||
-                    `Record ${index + 1}`;
+            const options = records.map(
+                (record, index) => {
+                    const label =
+                        record.name ||
+                        record.id ||
+                        `Record ${index + 1}`;
 
-                return `${index + 1}. ${label}`;
-            });
+                    return `${index + 1}. ${label}`;
+                }
+            );
 
             const answer = window.prompt(
                 "Enter the record number to load:\n\n" +
@@ -324,35 +462,46 @@ async function initializeDashboard() {
                     `${records.length} record(s) imported from JSON.`,
                     "success"
                 );
+
                 return;
             }
 
-            const selectedIndex = Number(answer) - 1;
+            const selectedIndex =
+                Number(answer) - 1;
 
             if (
                 !Number.isInteger(selectedIndex) ||
                 selectedIndex < 0 ||
                 selectedIndex >= records.length
             ) {
-                throw new Error("Invalid record number.");
+                throw new Error(
+                    "Invalid record number."
+                );
             }
 
-            const selectedRecord = records[selectedIndex];
+            const selectedRecord =
+                records[selectedIndex];
 
             if (
                 !selectedRecord ||
                 typeof selectedRecord.id !== "string"
             ) {
-                throw new Error("Selected record has an invalid ID.");
+                throw new Error(
+                    "Selected record has an invalid ID."
+                );
             }
 
             editingRecordId = selectedRecord.id;
 
-            // Use the same loader used for existing records.
-            await loadExistingRecord(editingRecordId);
+            // Use the common loader for all forms.
+            await loadExistingRecord(
+                editingRecordId
+            );
 
             showStatus(
-                `Loaded: ${selectedRecord.name || selectedRecord.id}`,
+                `Loaded: ${selectedRecord.name ||
+                selectedRecord.id
+                }`,
                 "success"
             );
 
@@ -361,41 +510,56 @@ async function initializeDashboard() {
                 return;
             }
 
-            console.error("Load JSON failed:", error);
+            console.error(
+                "Load JSON failed:",
+                error
+            );
 
             showStatus(
-                error.message || "Unable to load JSON records.",
+                error.message ||
+                "Unable to load JSON records.",
                 "error"
             );
 
         } finally {
             isLoading = false;
+
             loadButton.disabled = false;
             loadButton.textContent = "Load";
         }
     }
 
 
+    // Save Login, Journey, Train Selection and Passenger Details.
     async function saveAllDetails() {
         if (isSaving || isLoading) {
             return;
         }
 
         isSaving = true;
+
         saveButton.disabled = true;
         saveButton.textContent = "Saving...";
+
         showStatus("");
 
         try {
-            const loginDoc = getFrameDocument(loginFrame);
-            const bookingDoc = getFrameDocument(bookingFrame);
+            const loginDoc =
+                getFrameDocument(loginFrame);
+
+            const bookingDoc =
+                getFrameDocument(bookingFrame);
 
             // Read Login fields.
             const username =
-                loginDoc.getElementById("username").value.trim();
+                loginDoc.getElementById(
+                    "username"
+                ).value.trim();
 
             const password =
-                loginDoc.getElementById("password").value;
+                loginDoc.getElementById(
+                    "password"
+                ).value;
 
             if (!username || !password) {
                 throw new Error(
@@ -405,13 +569,19 @@ async function initializeDashboard() {
 
             // Read Journey Details fields.
             const fromStation =
-                bookingDoc.getElementById("fromStation").value.trim();
+                bookingDoc.getElementById(
+                    "fromStation"
+                ).value.trim();
 
             const toStation =
-                bookingDoc.getElementById("toStation").value.trim();
+                bookingDoc.getElementById(
+                    "toStation"
+                ).value.trim();
 
             const journeyDate =
-                bookingDoc.getElementById("journeyDate").value.trim();
+                bookingDoc.getElementById(
+                    "journeyDate"
+                ).value.trim();
 
             if (!fromStation || !toStation) {
                 throw new Error(
@@ -435,8 +605,23 @@ async function initializeDashboard() {
             }
 
             // Read Train Selection fields.
-            const trainSelection = readTrainSelection();
+            const trainSelection =
+                readTrainSelection();
 
+            // Read and validate Passenger Details.
+            const passengerForm =
+                getPassengerDetailsForm();
+
+            const passengerDetails =
+                passengerForm.getData();
+
+            if (!passengerDetails) {
+                throw new Error(
+                    "Please complete the required Passenger Details fields."
+                );
+            }
+
+            // Preserve existing Journey Details validation.
             if (
                 trainSelection.matchingRule === "number" &&
                 !trainSelection.trainNumber
@@ -478,21 +663,33 @@ async function initializeDashboard() {
                 );
             }
 
-            // Preserve the existing Journey Details record structure.
+            // Preserve the existing booking object structure.
             const booking = {
-                fromStation: fromStation.toUpperCase(),
-                toStation: toStation.toUpperCase(),
+                fromStation:
+                    fromStation.toUpperCase(),
+
+                toStation:
+                    toStation.toUpperCase(),
+
                 journeyDate,
-                journeyDateKey: getDateKey(journeyDate),
+
+                journeyDateKey:
+                    getDateKey(journeyDate),
 
                 travelClass:
-                    bookingDoc.getElementById("travelClass").value,
+                    bookingDoc.getElementById(
+                        "travelClass"
+                    ).value,
 
                 quota:
-                    bookingDoc.getElementById("quota").value,
+                    bookingDoc.getElementById(
+                        "quota"
+                    ).value,
 
                 flexibleDate:
-                    bookingDoc.getElementById("flexibleDate").checked,
+                    bookingDoc.getElementById(
+                        "flexibleDate"
+                    ).checked,
 
                 personWithDisabilityConcession:
                     bookingDoc.getElementById(
@@ -507,26 +704,32 @@ async function initializeDashboard() {
                 trainSelection
             };
 
-            // Trigger the file picker before other awaited operations.
-            // Handle cancellation without losing the existing local save.
-            
+            // Read existing records without replacing their structure.
+            const result =
+                await chrome.storage.local.get(
+                    RECORDS_STORAGE_KEY
+                );
 
-            const result = await chrome.storage.local.get(
-                RECORDS_STORAGE_KEY
-            );
-
-            const records = Array.isArray(result[RECORDS_STORAGE_KEY])
+            const records = Array.isArray(
+                result[RECORDS_STORAGE_KEY]
+            )
                 ? result[RECORDS_STORAGE_KEY]
                 : [];
 
-            const now = new Date().toISOString();
+            const now =
+                new Date().toISOString();
 
             const name =
                 `${getStationCode(fromStation)} → ` +
                 `${getStationCode(toStation)}`;
 
-            const login = { username, password };
-            const wasEditing = Boolean(editingRecordId);
+            const login = {
+                username,
+                password
+            };
+
+            const wasEditing =
+                Boolean(editingRecordId);
 
             let newRecordId = null;
 
@@ -541,30 +744,38 @@ async function initializeDashboard() {
                     );
                 }
 
+                // Spread preserves other existing record properties.
                 records[index] = {
                     ...records[index],
+
                     name,
                     login,
                     booking,
                     trainSelection,
+                    passengerDetails,
+
                     updatedAt: now
                 };
 
             } else {
-                newRecordId = crypto.randomUUID();
+                newRecordId =
+                    crypto.randomUUID();
 
                 records.push({
                     id: newRecordId,
+
                     name,
                     login,
                     booking,
                     trainSelection,
+                    passengerDetails,
+
                     createdAt: now,
                     updatedAt: now
                 });
             }
 
-            // Preserve the existing Chrome storage save.
+            // Keep the existing Chrome storage mechanism.
             await chrome.storage.local.set({
                 [RECORDS_STORAGE_KEY]: records
             });
@@ -573,27 +784,34 @@ async function initializeDashboard() {
                 editingRecordId = newRecordId;
             }
 
-
             showStatus(
                 wasEditing
-                    ? "Login, Journey and Train Selection details updated."
-                    : "Login, Journey and Train Selection details saved.",
+                    ? "Login, Journey, Train Selection and Passenger Details updated."
+                    : "Login, Journey, Train Selection and Passenger Details saved.",
                 "success"
             );
 
             saveButton.textContent = "Saved";
 
-            window.setTimeout(() => window.close(), 500);
+            window.setTimeout(
+                () => window.close(),
+                500
+            );
 
         } catch (error) {
-            console.error("Save Details failed:", error);
+            console.error(
+                "Save Details failed:",
+                error
+            );
 
             showStatus(
-                error.message || "Unable to save details.",
+                error.message ||
+                "Unable to save details.",
                 "error"
             );
 
-            saveButton.textContent = "Save Details";
+            saveButton.textContent =
+                "Save Details";
 
         } finally {
             isSaving = false;
@@ -603,28 +821,38 @@ async function initializeDashboard() {
 }
 
 
+// Normalize supported date formats.
 function normalizeDate(value) {
     if (typeof value !== "string") {
         return "";
     }
 
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-        return isValidDate(value) ? value : "";
+        return isValidDate(value)
+            ? value
+            : "";
     }
 
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        const [year, month, day] = value.split("-");
-        const formatted = `${day}/${month}/${year}`;
+        const [year, month, day] =
+            value.split("-");
 
-        return isValidDate(formatted) ? formatted : "";
+        const formatted =
+            `${day}/${month}/${year}`;
+
+        return isValidDate(formatted)
+            ? formatted
+            : "";
     }
 
     return "";
 }
 
 
+// Validate DD/MM/YYYY.
 function isValidDate(value) {
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    const match =
+        /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
 
     if (!match) {
         return false;
@@ -634,27 +862,40 @@ function isValidDate(value) {
     const month = Number(match[2]);
     const year = Number(match[3]);
 
-    const date = new Date(year, month - 1, day);
+    const date = new Date(
+        year,
+        month - 1,
+        day
+    );
 
-    return date.getFullYear() === year &&
+    return (
+        date.getFullYear() === year &&
         date.getMonth() === month - 1 &&
-        date.getDate() === day;
+        date.getDate() === day
+    );
 }
 
 
+// Convert DD/MM/YYYY to YYYY-MM-DD.
 function getDateKey(value) {
-    const [day, month, year] = value.split("/");
+    const [day, month, year] =
+        value.split("/");
 
     return `${year}-${month}-${day}`;
 }
 
 
+// Extract station code from the station display value.
 function getStationCode(stationName) {
-    const match = String(stationName || "").match(
+    const match = String(
+        stationName || ""
+    ).match(
         /-\s*([A-Z0-9]{2,5})\s*\(/i
     );
 
     return match
         ? match[1].toUpperCase()
-        : String(stationName || "").trim().toUpperCase();
+        : String(stationName || "")
+            .trim()
+            .toUpperCase();
 }
