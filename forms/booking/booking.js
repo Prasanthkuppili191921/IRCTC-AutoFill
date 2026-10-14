@@ -35,6 +35,21 @@ displayedMonth = new Date(
     1
 );
 
+[fromStationInput, toStationInput].forEach((input) => {
+    if (!input) return;
+
+    input.addEventListener("input", () => {
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+
+        input.value = input.value.toUpperCase();
+
+        if (start !== null && end !== null) {
+            input.setSelectionRange(start, end);
+        }
+    });
+});
+
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initialize, {
         once: true

@@ -1,0 +1,29 @@
+.station-autocomplete-list {
+    overflow-y: scroll !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #64748b #e2e8f0 !important;
+}
+
+    .station-autocomplete-list::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+        -webkit-appearance: none;
+    }
+
+    .station-autocomplete-list::-webkit-scrollbar-track {
+        background: #e2e8f0 !important;
+        border-radius: 8px;
+    }
+
+    .station-autocomplete-list::-webkit-scrollbar-thumb {
+        background: #64748b !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+    }
+
+    .station-autocomplete-list::-webkit-scrollbar-thumb:hover {
+        background: #475569 !important;
+    }
+
+
+         
