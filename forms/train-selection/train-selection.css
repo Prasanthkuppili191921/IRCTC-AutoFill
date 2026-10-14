@@ -14,18 +14,22 @@ body {
     background: #ffffff;
     color: #173b73;
     font-family: Arial, Helvetica, sans-serif;
+    overflow: visible;
 }
 
 .page-container {
     width: 100%;
     margin: 0;
     padding: 0;
+    overflow: visible;
 }
 
 .train-selection-card {
     width: 100%;
     padding: 24px 26px;
     background: #ffffff;
+    overflow: visible;
+    max-height: none;
 }
 
 .page-header {
@@ -51,6 +55,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
+    overflow: visible;
 }
 
 .field-group {
@@ -58,6 +63,7 @@ body {
     min-width: 0;
     flex-direction: column;
     gap: 8px;
+    overflow: visible;
 }
 
     .field-group label {
@@ -78,8 +84,13 @@ body {
         background: #ffffff;
         color: #173b73;
         font-family: inherit;
-        font-size: 13px;
+        font-size: 15px;
     }
+
+        .field-group input.has-selected-train {
+            font-weight: 700;
+            text-transform: uppercase;
+        }
 
         .field-group input::placeholder {
             color: #8798af;
@@ -90,6 +101,30 @@ body {
             box-shadow: 0 0 0 2px rgba(40, 100, 232, 0.12);
         }
 
+/* Train Info autocomplete wrapper */
+.train-autocomplete-container {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+
+/* Train suggestions dropdown */
+.train-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin: 0;
+    z-index: 99999;
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    background: #ffffff;
+}
+
+/* Responsive layout */
 @media (max-width: 600px) {
     .train-selection-card {
         padding: 20px 16px;
@@ -103,4 +138,44 @@ body {
     .page-header h1 {
         font-size: 19px;
     }
+}
+
+/* Prevent scrolling on the Train Selection page/card */
+html,
+body {
+    height: auto;
+    overflow: visible !important;
+}
+
+.page-container,
+.train-selection-card,
+.train-grid,
+.field-group,
+.train-info-field {
+    overflow: visible !important;
+    max-height: none !important;
+}
+
+/* Anchor dropdown directly below the Train Info field */
+.train-info-field {
+    position: relative;
+    min-width: 0;
+}
+
+/* Suggestions dropdown */
+#trainSuggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    margin: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+}
+
+.field-group input {
+    font-weight: 700;
 }

@@ -104,39 +104,33 @@ async function initializeDashboard() {
         return doc;
     }
 
-    function getTrainSelectionFields() {
-        const doc = getFrameDocument(trainSelectionFrame);
 
-        const fields = {
-            trainNumber: doc.getElementById("preferredTrainNumber"),
-            trainName: doc.getElementById("preferredTrainName")
-        };
+    function getTrainSelectionApi() {
+        const api =
+            trainSelectionFrame?.contentWindow?.IRCTCTrainSelection;
 
-        if (!fields.trainNumber || !fields.trainName) {
+        if (
+            !api ||
+            typeof api.read !== "function" ||
+            typeof api.populate !== "function"
+        ) {
             throw new Error(
-                "Train Selection fields were not found. " +
-                "Check the IDs in train-selection.html."
+                "Train Selection integration is unavailable. " +
+                "Check train-selection.js and train-autocomplete.js."
             );
         }
 
-        return fields;
+        return api;
     }
 
     function readTrainSelection() {
-        const fields = getTrainSelectionFields();
-
-        return {
-            trainNumber: fields.trainNumber.value.trim(),
-            trainName: fields.trainName.value.trim()
-        };
+        return getTrainSelectionApi().read();
     }
 
     function populateTrainSelection(value = {}) {
-        const fields = getTrainSelectionFields();
-
-        fields.trainNumber.value = value.trainNumber || "";
-        fields.trainName.value = value.trainName || "";
+        getTrainSelectionApi().populate(value);
     }
+
 
     function getPassengerDetailsForm() {
         const passengerForm =
@@ -184,7 +178,7 @@ async function initializeDashboard() {
             throw new Error("Journey form fields were not found.");
         }
 
-        getTrainSelectionFields();
+        getTrainSelectionApi();
 
         const passengerDoc = getFrameDocument(passengerDetailsFrame);
 

@@ -1,36 +1,29 @@
+
 "use strict";
 
 (function initializeTrainSelection() {
-    function read() {
-        return {
-            trainNumber:
-                document.getElementById("preferredTrainNumber")
-                    ?.value.trim() || "",
+    const autocomplete = window.IRCTCTrainAutocomplete;
 
-            trainName:
-                document.getElementById("preferredTrainName")
-                    ?.value.trim() || ""
-        };
-    }
+    if (
+        !autocomplete ||
+        typeof autocomplete.read !== "function" ||
+        typeof autocomplete.populate !== "function"
+    ) {
+        console.error(
+            "Train Selection initialization failed: " +
+            "train-autocomplete.js was not loaded correctly."
+        );
 
-    function populate(value = {}) {
-        const trainNumber =
-            document.getElementById("preferredTrainNumber");
-
-        const trainName =
-            document.getElementById("preferredTrainName");
-
-        if (trainNumber) {
-            trainNumber.value = value.trainNumber || "";
-        }
-
-        if (trainName) {
-            trainName.value = value.trainName || "";
-        }
+        return;
     }
 
     window.IRCTCTrainSelection = {
-        read,
-        populate
+        read() {
+            return autocomplete.read();
+        },
+
+        populate(value = {}) {
+            autocomplete.populate(value);
+        }
     };
 })();

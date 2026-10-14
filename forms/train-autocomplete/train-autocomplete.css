@@ -1,0 +1,110 @@
+.train-info-field {
+    position: relative;
+    min-width: 0;
+}
+
+/* Train autocomplete dropdown */
+.train-suggestions {
+    position: fixed;
+    z-index: 2147483647;
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: #ffffff;
+    color: #173b78;
+    border: 1px solid #c3ccd8;
+    border-radius: 5px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    max-height: 260px;
+    overflow-x: hidden;
+    overflow-y: scroll !important;
+    overscroll-behavior: contain;
+    /* Firefox scrollbar - same as station autocomplete */
+    scrollbar-width: thin !important;
+    scrollbar-color: #64748b #e2e8f0 !important;
+}
+
+    /* Hide dropdown when closed */
+    .train-suggestions[hidden] {
+        display: none;
+    }
+
+    /* Chrome / Edge scrollbar */
+    .train-suggestions::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+        -webkit-appearance: none;
+    }
+
+    .train-suggestions::-webkit-scrollbar-track {
+        background: #e2e8f0 !important;
+        border-radius: 8px;
+    }
+
+    .train-suggestions::-webkit-scrollbar-thumb {
+        background: #64748b !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px;
+    }
+
+        .train-suggestions::-webkit-scrollbar-thumb:hover {
+            background: #475569 !important;
+        }
+
+/* Individual train suggestion */
+.train-suggestion {
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 6px 10px;
+    color: #173b78;
+    background: #ffffff;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+    /* Mouse hover and keyboard selection */
+    .train-suggestion:hover,
+    .train-suggestion.active {
+        background: #2864e8;
+        color: #ffffff;
+    }
+
+/* Train name */
+.train-suggestion-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+/* Train route */
+.train-suggestion-route {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+/* Route text turns white when selected */
+.train-suggestion:hover .train-suggestion-route,
+.train-suggestion.active .train-suggestion-route {
+    color: #ffffff;
+}
+
+/* Search status */
+.train-search-status {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+    .train-search-status:empty {
+        display: none;
+    }
+

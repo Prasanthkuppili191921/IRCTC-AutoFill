@@ -1,10 +1,13 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Train Selection</title>
+
     <link rel="stylesheet" href="train-selection.css">
+    <link rel="stylesheet" href="../train-autocomplete/train-autocomplete.css">
 </head>
 <body>
     <main class="page-container">
@@ -16,34 +19,36 @@
 
             <form id="trainSelectionForm" novalidate>
                 <div class="train-grid">
-                    <div class="field-group">
-                        <label for="preferredTrainNumber">
-                            Train Number
-                        </label>
+                    <div class="field-group train-info-field">
+                        <label for="preferredTrainNumber">Train Info</label>
+
                         <input id="preferredTrainNumber"
                                name="preferredTrainNumber"
                                type="text"
-                               inputmode="numeric"
-                               maxlength="6"
                                autocomplete="off"
-                               placeholder="Enter Train Number">
-                    </div>
+                               placeholder="Enter Train Number or Name"
+                               role="combobox"
+                               aria-autocomplete="list"
+                               aria-expanded="false"
+                               aria-controls="trainSuggestions">
 
-                    <div class="field-group">
-                        <label for="preferredTrainName">
-                            Train Name
-                        </label>
-                        <input id="preferredTrainName"
-                               name="preferredTrainName"
-                               type="text"
-                               autocomplete="off"
-                               placeholder="Enter Train Name">
+                        <ul id="trainSuggestions"
+                            class="train-suggestions"
+                            role="listbox"
+                            aria-label="Matching trains"
+                            hidden></ul>
+
+                        <div id="trainSearchStatus"
+                             class="train-search-status"
+                             role="status"
+                             aria-live="polite"></div>
                     </div>
                 </div>
             </form>
         </section>
     </main>
 
+    <script src="../train-autocomplete/train-autocomplete.js"></script>
     <script src="train-selection.js"></script>
 </body>
 </html>

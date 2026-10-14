@@ -192,11 +192,10 @@ body {
 /* ========================================
    Train Selection Frame
 ======================================== */
-
 #trainSelectionFrame {
 	display: block;
 	width: 100%;
-	height: 250px;
+	height: 230px;
 	margin: 0;
 	padding: 0;
 	border: none;
@@ -217,13 +216,9 @@ body {
 	}
 }
 
-
-
-
 /* ========================================
    Passenger Details Frame
 ======================================== */
-
 #passengerDetailsFrame {
 	display: block;
 	width: 100%;
