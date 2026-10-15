@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -18,29 +19,38 @@
             </header>
 
             <form id="bookingForm" novalidate>
-                <div class="station-grid">
+                <div class="journey-fields-grid">
+
                     <div class="field-group">
                         <label for="fromStation">From *</label>
                         <div class="input-with-icon">
                             <span class="field-icon" aria-hidden="true">➤</span>
-                            <input id="fromStation" type="text"
+                            <input id="fromStation"
+                                   type="text"
                                    placeholder="From Station"
-                                   autocomplete="off" required>
+                                   autocomplete="off"
+                                   required>
                         </div>
+                        <small class="selected-station-display"
+                               id="fromStationSelectedName"
+                               aria-live="polite"></small>
                     </div>
 
                     <div class="field-group">
                         <label for="toStation">To *</label>
                         <div class="input-with-icon">
                             <span class="field-icon location-icon" aria-hidden="true">●</span>
-                            <input id="toStation" type="text"
+                            <input id="toStation"
+                                   type="text"
                                    placeholder="To Station"
-                                   autocomplete="off" required>
+                                   autocomplete="off"
+                                   required>
                         </div>
+                        <small class="selected-station-display"
+                               id="toStationSelectedName"
+                               aria-live="polite"></small>
                     </div>
-                </div>
 
-                <div class="details-grid">
                     <div class="field-group date-field-group">
                         <label for="journeyDate">Journey Date *</label>
 
@@ -53,7 +63,8 @@
                                     aria-expanded="false"
                                     aria-controls="calendarPopup">
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <rect x="3.5" y="5.5" width="17" height="15" rx="2"></rect>
+                                    <rect x="3.5" y="5.5"
+                                          width="17" height="15" rx="2"></rect>
                                     <path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17"></path>
                                 </svg>
                             </button>
@@ -117,8 +128,6 @@
                                 </button>
                             </div>
                         </div>
-
-                        <small>Enter a date or select it from the calendar.</small>
                     </div>
 
                     <div class="field-group">
@@ -140,7 +149,7 @@
                         </div>
                     </div>
 
-                    <div class="field-group quota-group">
+                    <div class="field-group">
                         <label for="quota">Quota</label>
                         <div class="select-with-icon">
                             <span class="field-icon" aria-hidden="true">▦</span>
@@ -155,6 +164,7 @@
                             </select>
                         </div>
                     </div>
+
                 </div>
 
                 <div class="concessions">

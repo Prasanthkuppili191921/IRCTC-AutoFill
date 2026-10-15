@@ -1,5 +1,4 @@
-﻿
-"use strict";
+﻿"use strict";
 
 const RECORDS_STORAGE_KEY = "bookingRecords";
 
@@ -38,23 +37,20 @@ async function initializeDashboard() {
     }
 
     // Journey Details calendar iframe messages.
+    // Journey Details iframe: adjust height to its actual content.
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin) return;
         if (event.source !== bookingFrame.contentWindow) return;
 
-        if (event.data?.type === "IRCTC_CALENDAR_OPEN") {
-            if (previousBookingFrameHeight === "") {
-                previousBookingFrameHeight = bookingFrame.style.height;
-            }
+        if (event.data?.type !== "IRCTC_BOOKING_HEIGHT") return;
 
-            bookingFrame.style.height = "760px";
-            bookingFrame.style.overflow = "visible";
-        }
+        const height = Number(event.data.height);
 
-        if (event.data?.type === "IRCTC_CALENDAR_CLOSE") {
-            bookingFrame.style.height = previousBookingFrameHeight;
-            previousBookingFrameHeight = "";
-        }
+        if (!Number.isFinite(height) || height <= 0) return;
+
+        // Prevent accidental oversized iframe values.
+        bookingFrame.style.height =
+            `${Math.min(Math.ceil(height), 1200)}px`;
     });
 
     // Passenger Details iframe height.
@@ -104,7 +100,6 @@ async function initializeDashboard() {
         return doc;
     }
 
-
     function getTrainSelectionApi() {
         const api =
             trainSelectionFrame?.contentWindow?.IRCTCTrainSelection;
@@ -130,7 +125,6 @@ async function initializeDashboard() {
     function populateTrainSelection(value = {}) {
         getTrainSelectionApi().populate(value);
     }
-
 
     function getPassengerDetailsForm() {
         const passengerForm =
@@ -234,13 +228,32 @@ async function initializeDashboard() {
         loginDoc.getElementById("password").value =
             login.password || "";
 
-        bookingDoc.getElementById("fromStation").value =
+        // Restore From and To values before refreshing station labels.
+        const fromStationInput =
+            bookingDoc.getElementById("fromStation");
+
+        const toStationInput =
+            bookingDoc.getElementById("toStation");
+
+        fromStationInput.value =
             getStationCode(booking.fromStation);
 
-        bookingDoc.getElementById("toStation").value =
+        toStationInput.value =
             getStationCode(booking.toStation);
 
-        const dateInput = bookingDoc.getElementById("journeyDate");
+        // Dispatch events using the booking iframe's Event constructor.
+        const FrameEvent = bookingFrame.contentWindow.Event;
+
+        fromStationInput.dispatchEvent(
+            new FrameEvent("change", { bubbles: true })
+        );
+
+        toStationInput.dispatchEvent(
+            new FrameEvent("change", { bubbles: true })
+        );
+
+        const dateInput =
+            bookingDoc.getElementById("journeyDate");
 
         dateInput.value = normalizeDate(booking.journeyDate);
 
@@ -255,14 +268,21 @@ async function initializeDashboard() {
 
         bookingDoc.getElementById(
             "personWithDisabilityConcession"
-        ).checked = Boolean(booking.personWithDisabilityConcession);
+        ).checked = Boolean(
+            booking.personWithDisabilityConcession
+        );
 
         bookingDoc.getElementById(
             "railwayPassConcession"
-        ).checked = Boolean(booking.railwayPassConcession);
+        ).checked = Boolean(
+            booking.railwayPassConcession
+        );
 
         dateInput.dispatchEvent(
-            new Event("input", { bubbles: true })
+            new bookingFrame.contentWindow.Event(
+                "input",
+                { bubbles: true }
+            )
         );
 
         const trainSelection =
@@ -271,7 +291,9 @@ async function initializeDashboard() {
         populateTrainSelection(trainSelection);
 
         // Backward compatibility: older records may not have passengerDetails.
-        getPassengerDetailsForm().setData(record.passengerDetails || {});
+        getPassengerDetailsForm().setData(
+            record.passengerDetails || {}
+        );
     }
 
     // Import JSON records and optionally load one into the forms.
@@ -295,7 +317,10 @@ async function initializeDashboard() {
                     [RECORDS_STORAGE_KEY]: []
                 });
 
-                showStatus("JSON file contains no records.", "success");
+                showStatus(
+                    "JSON file contains no records.",
+                    "success"
+                );
                 return;
             }
 
@@ -416,8 +441,13 @@ async function initializeDashboard() {
                 throw new Error("Enter both From and To stations.");
             }
 
-            if (fromStation.toUpperCase() === toStation.toUpperCase()) {
-                throw new Error("From and To stations must be different.");
+            if (
+                fromStation.toUpperCase() ===
+                toStation.toUpperCase()
+            ) {
+                throw new Error(
+                    "From and To stations must be different."
+                );
             }
 
             if (!isValidDate(journeyDate)) {
@@ -427,7 +457,8 @@ async function initializeDashboard() {
             }
 
             const trainSelection = readTrainSelection();
-            const passengerDetails = getPassengerDetailsForm().getData();
+            const passengerDetails =
+                getPassengerDetailsForm().getData();
 
             if (!passengerDetails) {
                 return;
@@ -460,12 +491,17 @@ async function initializeDashboard() {
                 !trainSelection.trainNumber &&
                 !trainSelection.trainName
             ) {
-                throw new Error("Enter a Train Number or Train Name.");
+                throw new Error(
+                    "Enter a Train Number or Train Name."
+                );
             }
 
             if (
                 trainSelection.matchingRule === "both" &&
-                (!trainSelection.trainNumber || !trainSelection.trainName)
+                (
+                    !trainSelection.trainNumber ||
+                    !trainSelection.trainName
+                )
             ) {
                 throw new Error(
                     "For Train Number and Train Name matching, " +
@@ -504,7 +540,9 @@ async function initializeDashboard() {
             const result =
                 await chrome.storage.local.get(RECORDS_STORAGE_KEY);
 
-            const records = Array.isArray(result[RECORDS_STORAGE_KEY])
+            const records = Array.isArray(
+                result[RECORDS_STORAGE_KEY]
+            )
                 ? result[RECORDS_STORAGE_KEY]
                 : [];
 
@@ -525,7 +563,9 @@ async function initializeDashboard() {
                 );
 
                 if (index === -1) {
-                    throw new Error("Saved record no longer exists.");
+                    throw new Error(
+                        "Saved record no longer exists."
+                    );
                 }
 
                 // Preserve all other existing record properties.
@@ -637,7 +677,6 @@ function getDateKey(value) {
 
 
 // Extract station code from a station display value.
-
 function getStationCode(stationName) {
     const value = String(stationName || "").trim();
 
@@ -649,4 +688,3 @@ function getStationCode(stationName) {
         ? match[1].toUpperCase()
         : value.toUpperCase();
 }
-

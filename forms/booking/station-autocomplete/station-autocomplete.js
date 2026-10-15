@@ -8,20 +8,147 @@
     const MAX_SUGGESTIONS = 8;
     const DEBOUNCE_MS = 300;
     const MIN_QUERY_LENGTH = 2;
+    const DROPDOWN_MIN_WIDTH = 200;
+    const DROPDOWN_MAX_HEIGHT = 240;
 
     const inputs = [
         document.getElementById("fromStation"),
         document.getElementById("toStation")
     ].filter(Boolean);
 
+    const displayByInputId = {
+        fromStation: document.getElementById("fromStationSelectedName"),
+        toStation: document.getElementById("toStationSelectedName")
+    };
+
     let stations = [];
     let stationsPromise = null;
+
+    // Parent dashboard integration for dropdown overlays.
+    let parentDocument = document;
+    let bookingFrame = null;
+
+    try {
+        if (window.parent !== window) {
+            parentDocument = window.parent.document;
+            bookingFrame = window.frameElement;
+        }
+    } catch (error) {
+        console.warn(
+            "Station dropdown will use the current document.",
+            error
+        );
+    }
+
+    // --------------------------------------------------
+    // Common helpers
+    // --------------------------------------------------
 
     function normalize(value) {
         return String(value || "").trim().toUpperCase();
     }
 
-    // Download station data into memory only once per page.
+    function getDisplayElement(input) {
+        return displayByInputId[input.id] || null;
+    }
+
+    function clearSelectedStationDisplay(input) {
+        const display = getDisplayElement(input);
+
+        if (display) {
+            display.textContent = "";
+            display.title = "";
+        }
+    }
+
+    function showSelectedStationDisplay(input, station) {
+        const display = getDisplayElement(input);
+
+        if (!display) return;
+
+        display.textContent = `${station.name} - ${station.code}`;
+        display.title = `${station.name} - ${station.code}`;
+    }
+
+    function findStationByCode(code) {
+        const normalizedCode = normalize(code);
+
+        if (!normalizedCode) return null;
+
+        return stations.find(
+            station => normalize(station.code) === normalizedCode
+        ) || null;
+    }
+
+    // --------------------------------------------------
+    // Parent dashboard scrollbar styles
+    // --------------------------------------------------
+
+    function installStationScrollbarStyles() {
+        if (
+            parentDocument.getElementById(
+                "irctcStationScrollbarStyles"
+            )
+        ) {
+            return;
+        }
+
+        const style = parentDocument.createElement("style");
+        style.id = "irctcStationScrollbarStyles";
+
+        style.textContent = `
+            .station-autocomplete-list {
+                overflow-y: scroll !important;
+                overflow-x: hidden !important;
+                scrollbar-width: thin !important;
+                scrollbar-color: #64748b #e2e8f0 !important;
+            }
+
+            .station-autocomplete-list::-webkit-scrollbar {
+                width: 8px !important;
+                height: 8px !important;
+                -webkit-appearance: none;
+            }
+
+            .station-autocomplete-list::-webkit-scrollbar-track {
+                background: #e2e8f0 !important;
+                border-radius: 8px;
+            }
+
+            .station-autocomplete-list::-webkit-scrollbar-thumb {
+                background: #64748b !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+            }
+
+            .station-autocomplete-list::-webkit-scrollbar-thumb:hover {
+                background: #475569 !important;
+            }
+
+            .station-autocomplete-list [role="option"] {
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                box-sizing: border-box;
+            }
+
+            .station-autocomplete-list [role="option"] > div:first-child {
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                font-weight: 600 !important;
+            }
+
+            .station-autocomplete-list [role="option"] .station-state {
+                white-space: normal !important;
+            }
+        `;
+
+        parentDocument.head.appendChild(style);
+    }
+
+    // --------------------------------------------------
+    // Load station data
+    // --------------------------------------------------
+
     async function loadStations() {
         if (stations.length) {
             return stations;
@@ -53,9 +180,21 @@
                 .filter(item => item && item.code && item.name)
                 .map(item => ({
                     code: normalize(item.code),
-                    name: normalize(item.name).replace(/\s+JN\.?$/, " JN."),
+                    name: normalize(item.name).replace(
+                        /\s+JN\.?$/,
+                        " JN."
+                    ),
                     state: String(item.state || "").trim()
                 }));
+
+            // Resolve station names for existing/saved station codes.
+            inputs.forEach(input => {
+                const station = findStationByCode(input.value);
+
+                if (station) {
+                    showSelectedStationDisplay(input, station);
+                }
+            });
 
             return stations;
         })();
@@ -68,50 +207,157 @@
         }
     }
 
+    // --------------------------------------------------
+    // Station autocomplete
+    // --------------------------------------------------
+
     function createAutocomplete(input) {
         const container = input.parentElement;
 
-        if (!container) {
-            return;
-        }
+        if (!container) return;
 
-        // Preserve the existing textbox and layout.
         if (getComputedStyle(container).position === "static") {
             container.style.position = "relative";
         }
 
-        const dropdown = document.createElement("div");
+        // Create the dropdown in the dashboard document so it can
+        // appear outside the booking iframe without being clipped.
+        const dropdown = parentDocument.createElement("div");
+
         dropdown.className = "station-autocomplete-list";
         dropdown.hidden = true;
         dropdown.setAttribute("role", "listbox");
 
         Object.assign(dropdown.style, {
-            position: "absolute",
-            top: "calc(100% + 4px)",
+            position: "fixed",
+            top: "0",
             left: "0",
-            right: "0",
-            maxHeight: "240px",
-            overflowY: "auto",
+            width: `${DROPDOWN_MIN_WIDTH}px`,
+            maxHeight: `${DROPDOWN_MAX_HEIGHT}px`,
+            overflowY: "scroll",
+            overflowX: "hidden",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#64748b #e2e8f0",
             background: "#ffffff",
             color: "#173b78",
             border: "1px solid #c3ccd8",
             borderRadius: "5px",
             boxShadow: "0 6px 18px rgba(0,0,0,.15)",
-            zIndex: "2147483647"
+            zIndex: "2147483647",
+            padding: "0",
+            margin: "0",
+            boxSizing: "border-box",
+            fontFamily: "Arial, Helvetica, sans-serif"
         });
 
-        container.appendChild(dropdown);
+        installStationScrollbarStyles();
+        parentDocument.body.appendChild(dropdown);
+
+        // --------------------------------------------------
+        // Position dropdown relative to its textbox
+        // --------------------------------------------------
+
+
+
+
+
+
+        function positionDropdown() {
+            if (dropdown.hidden) return;
+
+            const container = input.closest(".input-with-icon");
+            if (!container) return;
+
+            const containerRect = container.getBoundingClientRect();
+
+            // Convert textbox coordinates to dashboard coordinates.
+            let left = containerRect.left;
+            let anchorTop = containerRect.top;
+            let anchorBottom = containerRect.bottom;
+
+            if (bookingFrame && parentDocument !== document) {
+                const frameRect = bookingFrame.getBoundingClientRect();
+
+                left = frameRect.left + containerRect.left;
+                anchorTop = frameRect.top + containerRect.top;
+                anchorBottom = frameRect.top + containerRect.bottom;
+            }
+
+            const viewportWidth =
+                parentDocument.documentElement.clientWidth;
+
+            const viewportHeight =
+                parentDocument.documentElement.clientHeight;
+
+            const gap = 4;
+            const dropdownWidth = containerRect.width;
+
+            // Keep dropdown aligned with the textbox.
+            left = Math.max(
+                0,
+                Math.min(left, viewportWidth - dropdownWidth)
+            );
+
+            // Calculate available space around the textbox.
+            const spaceBelow = Math.max(
+                0,
+                viewportHeight - anchorBottom - gap
+            );
+
+            const spaceAbove = Math.max(
+                0,
+                anchorTop - gap
+            );
+
+            const naturalHeight = Math.min(
+                dropdown.scrollHeight,
+                DROPDOWN_MAX_HEIGHT
+            );
+
+            // Prefer below when it fits; otherwise use the side with more space.
+            const openAbove =
+                spaceBelow < naturalHeight &&
+                spaceAbove > spaceBelow;
+
+            const availableSpace = openAbove ? spaceAbove : spaceBelow;
+
+            const maxHeight = Math.min(
+                DROPDOWN_MAX_HEIGHT,
+                availableSpace
+            );
+
+            const top = openAbove
+                ? anchorTop - maxHeight - gap
+                : anchorBottom + gap;
+
+            dropdown.style.position = "fixed";
+            dropdown.style.left = `${left}px`;
+            dropdown.style.top = `${Math.max(0, top)}px`;
+            dropdown.style.width = `${dropdownWidth}px`;
+            dropdown.style.maxHeight = `${maxHeight}px`;
+        }
+
+
+
+
+
 
         let debounceTimer = null;
         let requestNumber = 0;
         let activeIndex = -1;
         let matches = [];
 
+        // --------------------------------------------------
+        // Dropdown controls
+        // --------------------------------------------------
+
         function closeDropdown() {
             dropdown.hidden = true;
             dropdown.replaceChildren();
+
             matches = [];
             activeIndex = -1;
+
             input.setAttribute("aria-expanded", "false");
             input.removeAttribute("aria-activedescendant");
         }
@@ -119,23 +365,30 @@
         function showMessage(message) {
             dropdown.replaceChildren();
 
-            const item = document.createElement("div");
+            const item = parentDocument.createElement("div");
             item.textContent = message;
 
             Object.assign(item.style, {
                 padding: "10px 12px",
                 fontSize: "13px",
-                color: "#64748b"
+                lineHeight: "1.3",
+                color: "#64748b",
+                background: "#ffffff",
+                boxSizing: "border-box"
             });
 
             dropdown.appendChild(item);
             dropdown.hidden = false;
+
             input.setAttribute("aria-expanded", "true");
+            positionDropdown();
         }
 
         function selectStation(station) {
+            // Keep the code in the textbox for existing AutoFill logic.
             input.value = station.code;
 
+            showSelectedStationDisplay(input, station);
             closeDropdown();
 
             input.dispatchEvent(
@@ -143,13 +396,14 @@
             );
         }
 
-        function setActiveIndex(index) {
-            if (!matches.length) {
-                return;
-            }
+        // --------------------------------------------------
+        // Keyboard navigation
+        // --------------------------------------------------
 
-            activeIndex =
-                (index + matches.length) % matches.length;
+        function setActiveIndex(index) {
+            if (!matches.length) return;
+
+            activeIndex = (index + matches.length) % matches.length;
 
             const options = dropdown.querySelectorAll(
                 '[role="option"]'
@@ -178,7 +432,9 @@
                 );
 
                 if (active) {
-                    option.scrollIntoView({ block: "nearest" });
+                    option.scrollIntoView({
+                        block: "nearest"
+                    });
 
                     input.setAttribute(
                         "aria-activedescendant",
@@ -188,8 +444,13 @@
             });
         }
 
+        // --------------------------------------------------
+        // Render station suggestions
+        // --------------------------------------------------
+
         function renderSuggestions(items) {
             dropdown.replaceChildren();
+
             matches = items;
             activeIndex = -1;
 
@@ -200,63 +461,82 @@
             }
 
             items.forEach((station, index) => {
-                const option = document.createElement("button");
+                const option = parentDocument.createElement("button");
 
                 option.type = "button";
-                option.id = `${input.id}-station-option-${index}`;
+                option.id =
+                    `${input.id}-station-option-${index}`;
+
                 option.setAttribute("role", "option");
                 option.setAttribute("aria-selected", "false");
+
 
                 Object.assign(option.style, {
                     display: "block",
                     width: "100%",
                     padding: "6px 10px",
+                    margin: "0",
                     border: "0",
+                    borderRadius: "0",
                     textAlign: "left",
                     backgroundColor: "#ffffff",
                     color: "#173b78",
                     cursor: "pointer",
+                    fontFamily: "Arial, Helvetica, sans-serif",
                     fontSize: "13px",
                     lineHeight: "1.2",
-                    transition: "background-color 0.15s ease"
+                    transition: "background-color 0.15s ease",
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere",
+                    boxSizing: "border-box",
+                    height: "auto",
+                    minHeight: "0"
                 });
 
-                const nameLine = document.createElement("div");
+
+                const nameLine =
+                    parentDocument.createElement("div");
 
                 nameLine.textContent =
                     `${station.name} - ${station.code}`;
 
                 Object.assign(nameLine.style, {
                     fontWeight: "600",
-                    fontSize: "13px"
+                    fontSize: "13px",
+                    lineHeight: "1.2",
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere"
                 });
 
                 option.appendChild(nameLine);
 
                 if (station.state) {
-                    const stateLine = document.createElement("div");
-                    stateLine.className = "station-state";
+                    const stateLine =
+                        parentDocument.createElement("div");
 
-                    stateLine.textContent = station.state.toUpperCase();
+                    stateLine.className = "station-state";
+                    stateLine.textContent =
+                        station.state.toUpperCase();
 
                     Object.assign(stateLine.style, {
                         marginTop: "2px",
                         fontSize: "11px",
                         fontWeight: "500",
                         lineHeight: "1.2",
-                        color: "#64748b"
+                        color: "#64748b",
+                        whiteSpace: "normal"
                     });
 
                     option.appendChild(stateLine);
-
-                    option.title = `${station.name}, ${station.state}`;
+                    option.title =
+                        `${station.name}, ${station.state}`;
                 }
 
                 option.addEventListener("mousedown", event => {
+                    // Keep focus on the input until selection is made.
                     event.preventDefault();
                 });
 
-                // Mouse hover uses the same color as keyboard selection.
                 option.addEventListener("mouseenter", () => {
                     setActiveIndex(index);
                 });
@@ -264,7 +544,10 @@
                 option.addEventListener("mouseleave", () => {
                     if (activeIndex === index) {
                         activeIndex = -1;
-                        input.removeAttribute("aria-activedescendant");
+
+                        input.removeAttribute(
+                            "aria-activedescendant"
+                        );
 
                         option.style.backgroundColor = "#ffffff";
                         option.style.color = "#173b78";
@@ -276,7 +559,10 @@
                             stateLine.style.color = "#64748b";
                         }
 
-                        option.setAttribute("aria-selected", "false");
+                        option.setAttribute(
+                            "aria-selected",
+                            "false"
+                        );
                     }
                 });
 
@@ -288,21 +574,25 @@
             });
 
             dropdown.hidden = false;
+
             input.setAttribute("aria-expanded", "true");
+            positionDropdown();
         }
+
+        // --------------------------------------------------
+        // Search stations
+        // --------------------------------------------------
 
         async function search(query, currentRequest) {
             try {
                 const allStations = await loadStations();
 
-                // Ignore stale results if the input changed meanwhile.
                 if (
                     currentRequest !== requestNumber ||
                     normalize(input.value) !== query
                 ) {
                     return;
                 }
-
 
                 const queryParts = query.match(
                     /^(.*?)\s*-\s*([A-Z0-9]{1,5})(?:\s*\([^)]*\))?$/
@@ -342,16 +632,20 @@
                         const aDisplay = `${aName} - ${aCode}`;
                         const bDisplay = `${bName} - ${bCode}`;
 
-                        // Exact full station value gets highest priority.
-                        if (aDisplay === query && bDisplay !== query) {
+                        if (
+                            aDisplay === query &&
+                            bDisplay !== query
+                        ) {
                             return -1;
                         }
 
-                        if (bDisplay === query && aDisplay !== query) {
+                        if (
+                            bDisplay === query &&
+                            aDisplay !== query
+                        ) {
                             return 1;
                         }
 
-                        // Then exact station-code match.
                         if (aCode === query && bCode !== query) {
                             return -1;
                         }
@@ -360,17 +654,21 @@
                             return 1;
                         }
 
-                        // Then station codes starting with the query.
-                        const aCodeMatch = aCode.startsWith(stationCodeQuery);
-                        const bCodeMatch = bCode.startsWith(stationCodeQuery);
+                        const aCodeMatch =
+                            aCode.startsWith(stationCodeQuery);
+
+                        const bCodeMatch =
+                            bCode.startsWith(stationCodeQuery);
 
                         if (aCodeMatch !== bCodeMatch) {
                             return aCodeMatch ? -1 : 1;
                         }
 
-                        // Then station names starting with the query.
-                        const aNameMatch = aName.startsWith(stationNameQuery);
-                        const bNameMatch = bName.startsWith(stationNameQuery);
+                        const aNameMatch =
+                            aName.startsWith(stationNameQuery);
+
+                        const bNameMatch =
+                            bName.startsWith(stationNameQuery);
 
                         if (aNameMatch !== bNameMatch) {
                             return aNameMatch ? -1 : 1;
@@ -382,7 +680,10 @@
 
                 renderSuggestions(results);
             } catch (error) {
-                console.error("Station autocomplete error:", error);
+                console.error(
+                    "Station autocomplete error:",
+                    error
+                );
 
                 if (currentRequest === requestNumber) {
                     showMessage(
@@ -392,12 +693,19 @@
             }
         }
 
+        // --------------------------------------------------
+        // Input events
+        // --------------------------------------------------
+
         input.setAttribute("autocomplete", "off");
         input.setAttribute("aria-autocomplete", "list");
         input.setAttribute("aria-expanded", "false");
 
         input.addEventListener("input", () => {
             const query = normalize(input.value);
+
+            // Clear the old label when the user edits the station.
+            clearSelectedStationDisplay(input);
 
             clearTimeout(debounceTimer);
             requestNumber++;
@@ -414,10 +722,27 @@
             }, DEBOUNCE_MS);
         });
 
-        input.addEventListener("keydown", event => {
-            if (dropdown.hidden) {
-                return;
+        input.addEventListener("change", async () => {
+            try {
+                const allStations = await loadStations();
+
+                const station = allStations.find(
+                    item => item.code === normalize(input.value)
+                );
+
+                if (station) {
+                    showSelectedStationDisplay(input, station);
+                }
+            } catch (error) {
+                console.warn(
+                    "Could not resolve selected station name.",
+                    error
+                );
             }
+        });
+
+        input.addEventListener("keydown", event => {
+            if (dropdown.hidden) return;
 
             if (event.key === "ArrowDown") {
                 event.preventDefault();
@@ -444,18 +769,72 @@
 
         input.addEventListener("blur", () => {
             window.setTimeout(() => {
-                if (!container.contains(document.activeElement)) {
+                if (
+                    !container.contains(document.activeElement) &&
+                    !dropdown.contains(parentDocument.activeElement)
+                ) {
                     closeDropdown();
                 }
             }, 150);
         });
 
+        // Clicking elsewhere in the booking iframe closes the list.
         document.addEventListener("pointerdown", event => {
-            if (!container.contains(event.target)) {
+            if (
+                !container.contains(event.target) &&
+                !dropdown.contains(event.target)
+            ) {
                 closeDropdown();
             }
         });
+
+        // Clicking elsewhere on the dashboard closes the list.
+        parentDocument.addEventListener("pointerdown", event => {
+            if (dropdown.contains(event.target)) return;
+
+            // Clicks inside the booking iframe are handled above.
+            if (event.target === bookingFrame) return;
+
+            closeDropdown();
+        });
+
+        // Keep the overlay aligned during scrolling and resizing.
+        window.addEventListener(
+            "scroll",
+            positionDropdown,
+            true
+        );
+
+        window.addEventListener(
+            "resize",
+            positionDropdown
+        );
+
+        if (window.parent !== window) {
+            window.parent.addEventListener(
+                "scroll",
+                positionDropdown,
+                true
+            );
+
+            window.parent.addEventListener(
+                "resize",
+                positionDropdown
+            );
+        }
     }
 
+    // --------------------------------------------------
+    // Initialize
+    // --------------------------------------------------
+
     inputs.forEach(createAutocomplete);
+
+    // Load station data so prefilled/saved codes show their names.
+    loadStations().catch(error => {
+        console.warn(
+            "Initial station-name lookup failed:",
+            error
+        );
+    });
 })();

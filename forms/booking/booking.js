@@ -29,6 +29,327 @@ const editingRecordId = params.get("id");
 
 let isSaving = false;
 let displayedMonth = new Date();
+
+let calendarParentDocument = null;
+let calendarParentFrame = null;
+let calendarParentListenersInstalled = false;
+let bookingHeightObserver = null;
+
+function setupEmbeddedDashboardIntegration() {
+    if (window.parent === window) return;
+
+    try {
+        calendarParentDocument = window.parent.document;
+        calendarParentFrame = window.frameElement;
+
+        if (!calendarParentDocument || !calendarParentFrame) {
+            return;
+        }
+
+        installParentCalendarStyles();
+
+        if (!calendarParentListenersInstalled) {
+            calendarParentListenersInstalled = true;
+
+            // Clicks outside the iframe and calendar close the calendar.
+            calendarParentDocument.addEventListener(
+                "pointerdown",
+                event => {
+                    if (calendarPopup.hidden) return;
+
+                    if (calendarPopup.contains(event.target)) return;
+
+                    // Clicks inside the booking iframe are handled by
+                    // the booking document's own outside-click listener.
+                    if (event.target === calendarParentFrame) return;
+
+                    closeCalendar();
+                }
+            );
+
+            calendarParentDocument.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key === "Escape" && !calendarPopup.hidden) {
+                        closeCalendar();
+                    }
+                }
+            );
+
+            window.parent.addEventListener(
+                "resize",
+                positionCalendarPopup
+            );
+
+            window.parent.addEventListener(
+                "scroll",
+                positionCalendarPopup,
+                true
+            );
+
+            window.addEventListener(
+                "resize",
+                positionCalendarPopup
+            );
+
+            window.addEventListener(
+                "scroll",
+                positionCalendarPopup,
+                true
+            );
+        }
+
+        // Keep the dashboard iframe sized to the form content.
+        if ("ResizeObserver" in window && !bookingHeightObserver) {
+            bookingHeightObserver = new ResizeObserver(() => {
+                reportBookingFrameHeight();
+            });
+
+            bookingHeightObserver.observe(
+                document.querySelector(".booking-card") ||
+                document.body
+            );
+        }
+
+        reportBookingFrameHeight();
+    } catch (error) {
+        console.warn(
+            "Dashboard overlay integration could not be initialized.",
+            error
+        );
+    }
+}
+
+function reportBookingFrameHeight() {
+    if (
+        window.parent === window ||
+        !calendarParentFrame
+    ) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        const pageContainer =
+            document.querySelector(".page-container");
+
+        const height = Math.ceil(Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight,
+            pageContainer?.scrollHeight || 0
+        ));
+
+        window.parent.postMessage(
+            {
+                type: "IRCTC_BOOKING_HEIGHT",
+                height
+            },
+            window.location.origin
+        );
+    });
+}
+
+function installParentCalendarStyles() {
+    if (
+        !calendarParentDocument ||
+        calendarParentDocument.getElementById(
+            "irctcParentCalendarStyles"
+        )
+    ) {
+        return;
+    }
+
+    const style = calendarParentDocument.createElement("style");
+    style.id = "irctcParentCalendarStyles";
+
+    style.textContent = `
+        #calendarPopup.irctc-calendar-parent-overlay {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            z-index: 2147483647 !important;
+            width: 300px !important;
+            min-width: 280px !important;
+            max-width: calc(100vw - 16px) !important;
+            height: auto !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 12px !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+            border: 1px solid #d4dce7 !important;
+            border-radius: 8px !important;
+            background: #ffffff !important;
+            color: #26364d !important;
+            box-shadow: 0 8px 24px rgba(25,45,75,.18) !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay[hidden] {
+            display: none !important;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-header {
+            display: grid;
+            grid-template-columns: 34px minmax(0,1fr) 34px;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .month-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 0;
+            border-radius: 5px;
+            background: transparent;
+            color: #294d83;
+            font-size: 25px;
+            cursor: pointer;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .month-year-button {
+            min-width: 0;
+            padding: 8px 4px;
+            border: 0;
+            background: transparent;
+            color: #173b78;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-weekdays,
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7,minmax(0,1fr));
+            gap: 3px;
+            text-align: center;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-weekdays {
+            margin-bottom: 6px;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-weekdays span {
+            padding: 5px 0;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-day {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 34px;
+            padding: 0;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            background: transparent;
+            color: #26364d;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-day:hover {
+            border-color: #b8cce8;
+            background: #edf4ff;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-day.outside-month {
+            color: #9aa7b8;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-day.today {
+            border-color: #216bd2;
+            font-weight: 700;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-day.selected {
+            border-color: #216bd2;
+            background: #216bd2;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px solid #edf0f5;
+        }
+
+        #calendarPopup.irctc-calendar-parent-overlay .calendar-footer button {
+            padding: 7px 5px;
+            border: 0;
+            border-radius: 4px;
+            background: transparent;
+            color: #216bd2;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+        }
+    `;
+
+    calendarParentDocument.head.appendChild(style);
+}
+
+function positionCalendarPopup() {
+    if (
+        !calendarParentDocument ||
+        !calendarParentFrame ||
+        calendarPopup.hidden ||
+        !calendarParentFrame.isConnected
+    ) {
+        return;
+    }
+
+    const frameRect = calendarParentFrame.getBoundingClientRect();
+    const anchor = document.getElementById("dateInputWrapper");
+    const anchorRect =
+        (anchor || journeyDateInput).getBoundingClientRect();
+
+    const viewportWidth =
+        calendarParentDocument.documentElement.clientWidth;
+
+    const viewportHeight =
+        calendarParentDocument.documentElement.clientHeight;
+
+    const popupWidth = Math.min(300, viewportWidth - 16);
+    const popupHeight = calendarPopup.getBoundingClientRect().height;
+
+    let left = frameRect.left + anchorRect.left;
+    let top = frameRect.top + anchorRect.bottom + 6;
+
+    // Keep the calendar inside the visible dashboard viewport.
+    left = Math.max(
+        8,
+        Math.min(left, viewportWidth - popupWidth - 8)
+    );
+
+    // If there isn't enough room below, open above the date field.
+    if (top + popupHeight > viewportHeight - 8) {
+        top = frameRect.top + anchorRect.top - popupHeight - 6;
+    }
+
+    top = Math.max(
+        8,
+        Math.min(top, viewportHeight - popupHeight - 8)
+    );
+
+    calendarPopup.style.left = `${left}px`;
+    calendarPopup.style.top = `${top}px`;
+    calendarPopup.style.width = `${popupWidth}px`;
+}
+
 displayedMonth = new Date(
     displayedMonth.getFullYear(),
     displayedMonth.getMonth(),
@@ -63,6 +384,10 @@ if (document.readyState === "loading") {
 function initialize() {
     const isEmbedded =
         new URLSearchParams(window.location.search).get("embedded") === "1";
+
+    if (isEmbedded) {
+        setupEmbeddedDashboardIntegration();
+    }
 
     // Embedded mode: buttons may not exist in booking.html.
     if (isEmbedded) {
@@ -103,6 +428,8 @@ function initialize() {
 
     renderCalendar();
 
+    reportBookingFrameHeight();
+
     if (editingRecordId) {
         loadRecordForEditing(editingRecordId);
     }
@@ -130,31 +457,30 @@ function openCalendar() {
         }
     }
 
+    // Move the popup to the parent dashboard so the iframe cannot clip it.
+    if (
+        calendarParentDocument &&
+        calendarPopup.parentNode !== calendarParentDocument.body
+    ) {
+        calendarPopup.classList.add(
+            "irctc-calendar-parent-overlay"
+        );
+
+        calendarParentDocument.body.appendChild(calendarPopup);
+    }
+
     calendarPopup.hidden = false;
     openCalendarButton.setAttribute("aria-expanded", "true");
 
     renderCalendar();
 
-    // Parent dashboard ki calendar open ayindani teliyajeyali.
-    if (window.parent !== window) {
-        window.parent.postMessage(
-            { type: "IRCTC_CALENDAR_OPEN" },
-            window.location.origin
-        );
-    }
+    // Position after the calendar has been made visible.
+    positionCalendarPopup();
 }
 
 function closeCalendar() {
     calendarPopup.hidden = true;
     openCalendarButton.setAttribute("aria-expanded", "false");
-
-    // Parent dashboard ki calendar close ayindani teliyajeyali.
-    if (window.parent !== window) {
-        window.parent.postMessage(
-            { type: "IRCTC_CALENDAR_CLOSE" },
-            window.location.origin
-        );
-    }
 }
 
 

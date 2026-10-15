@@ -1,6 +1,5 @@
-﻿
-/* ========================================
-   Global Styles
+﻿/* ========================================
+   Journey Details — layout and controls
 ======================================== */
 
 * {
@@ -10,7 +9,7 @@
 html {
     width: 100%;
     min-height: 0;
-    background: #ffffff;
+    background: #fff;
 }
 
 body {
@@ -19,7 +18,7 @@ body {
     height: auto;
     margin: 0;
     padding: 0;
-    background: #ffffff;
+    background: #fff;
     color: #26364d;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
@@ -27,24 +26,15 @@ body {
     overflow-y: auto;
 }
 
-/* ========================================
-   Page Container
-======================================== */
-
 .page-container {
     display: block;
     width: 100%;
-    max-width: none;
     height: auto !important;
     min-height: 0 !important;
     margin: 0;
     padding: 0;
     overflow: visible;
 }
-
-/* ========================================
-   Journey Details Card
-======================================== */
 
 .booking-card {
     position: relative;
@@ -53,17 +43,13 @@ body {
     height: auto !important;
     min-height: 0 !important;
     margin: 0;
-    padding: 24px 32px;
-    background: #ffffff;
-    border: none;
+    padding: 24px 28px;
+    background: #fff;
+    border: 0;
     border-radius: 0;
     box-shadow: none;
     overflow: visible;
 }
-
-/* ========================================
-   Page Header
-======================================== */
 
 .page-header {
     margin: 0 0 24px;
@@ -86,22 +72,12 @@ body {
         text-align: center;
     }
 
-/* ========================================
-   Station Fields
-======================================== */
-
-.station-grid {
+/* Five fields in one shared grid (not two separate grids). */
+.journey-fields-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    width: 100%;
-    margin-bottom: 22px;
-}
-
-.details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 24px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
     width: 100%;
 }
 
@@ -122,69 +98,53 @@ body {
         line-height: 1.4;
     }
 
-.quota-group {
-    grid-column: 1;
-}
-
-/* ========================================
-   Input and Select Containers
-======================================== */
-
 .input-with-icon,
 .select-with-icon {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 7px;
     width: 100%;
     min-width: 0;
-    height: 50px;
+    height: 46px;
     margin: 0;
-    padding: 0 12px;
+    padding: 0 8px;
     border: 1px solid #c3ccd8;
     border-radius: 5px;
-    background: #ffffff;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
 }
 
     .input-with-icon:focus-within,
     .select-with-icon:focus-within {
         border-color: #2878bd;
-        box-shadow: 0 0 0 3px rgba(40, 120, 189, 0.12);
+        box-shadow: 0 0 0 3px rgba(40, 120, 189, .12);
     }
-
-/* ========================================
-   Field Icons
-======================================== */
 
 .field-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
+    width: 18px;
     height: 22px;
-    flex: 0 0 22px;
+    flex: 0 0 18px;
     margin: 0;
     padding: 0;
     color: #294d83;
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1;
     text-align: center;
 }
 
 .location-icon {
-    font-size: 15px;
+    font-size: 14px;
 }
-
-/* ========================================
-   Text Inputs
-======================================== */
 
 .input-with-icon input[type="text"] {
     display: block;
     flex: 1 1 auto;
     width: 0;
     min-width: 0;
-    height: 46px;
+    height: 42px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -193,7 +153,7 @@ body {
     background: transparent;
     color: #173b78;
     font: inherit;
-    font-size: 15px;
+    font-size: 14px;
     box-shadow: none;
 }
 
@@ -207,16 +167,17 @@ body {
         box-shadow: none;
     }
 
-/* ========================================
-   Select Inputs
-======================================== */
+#fromStation,
+#toStation {
+    font-weight: 700;
+}
 
 .select-with-icon select {
     display: block;
     flex: 1 1 auto;
     width: 0;
     min-width: 0;
-    height: 46px;
+    height: 42px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -226,7 +187,7 @@ body {
     background: transparent;
     color: #173b78;
     font: inherit;
-    font-size: 15px;
+    font-size: 13px;
     cursor: pointer;
     box-shadow: none;
 }
@@ -236,10 +197,14 @@ body {
         box-shadow: none;
     }
 
-/* ========================================
-   Date Field and Calendar Icon
-======================================== */
+.field-group small {
+    margin: 0;
+    color: #718096;
+    font-size: 11px;
+    line-height: 1.35;
+}
 
+/* Keep the date input and calendar overlay above neighboring fields. */
 .date-field-group {
     position: relative;
     z-index: 10000;
@@ -252,7 +217,7 @@ body {
     z-index: 10001;
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 5px;
     overflow: visible !important;
 }
 
@@ -261,11 +226,11 @@ body {
     align-items: center;
     justify-content: center;
     order: 1;
-    width: 28px;
-    height: 34px;
-    flex: 0 0 28px;
+    width: 24px;
+    height: 32px;
+    flex: 0 0 24px;
     margin: 0;
-    padding: 4px;
+    padding: 3px;
     border: 0;
     border-radius: 5px;
     background: transparent;
@@ -280,8 +245,8 @@ body {
 
     .calendar-button svg {
         display: block;
-        width: 21px;
-        height: 21px;
+        width: 19px;
+        height: 19px;
         fill: none;
         stroke: currentColor;
         stroke-width: 1.8;
@@ -293,38 +258,31 @@ body {
     order: 2;
 }
 
-/* ========================================
-   Calendar Popup
-   Independent floating overlay
-======================================== */
-
+/* Independent floating calendar popup. */
 .calendar-popup {
     position: absolute !important;
-    top: calc(100% + 4px);
-    left: 0;
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
     z-index: 2147483647 !important;
     display: block;
-    width: 300px;
-    min-width: 280px;
-    max-width: 320px;
+    width: 300px !important;
+    min-width: 280px !important;
+    max-width: min(320px, calc(100vw - 32px)) !important;
     height: auto !important;
     max-height: none !important;
-    overflow: visible !important;
-    margin: 0;
+    margin: 0 !important;
     padding: 12px;
-    border: 1px solid #d4dce7;
+    overflow: visible !important;
+    border: 1px solid #d4dce7 !important;
     border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 8px 24px rgba(25, 45, 75, 0.18);
+    background: #fff !important;
+    box-shadow: 0 8px 24px rgba(25, 45, 75, .18) !important;
+    box-sizing: border-box !important;
 }
 
     .calendar-popup[hidden] {
         display: none !important;
     }
-
-/* ========================================
-   Calendar Header
-======================================== */
 
 .calendar-header {
     display: grid;
@@ -365,10 +323,6 @@ body {
     text-align: center;
     cursor: default;
 }
-
-/* ========================================
-   Calendar Days
-======================================== */
 
 .calendar-weekdays,
 .calendar-days {
@@ -424,13 +378,9 @@ body {
     .calendar-day.selected {
         border-color: #216bd2;
         background: #216bd2;
-        color: #ffffff;
+        color: #fff;
         font-weight: 700;
     }
-
-/* ========================================
-   Calendar Footer
-======================================== */
 
 .calendar-footer {
     display: flex;
@@ -456,58 +406,64 @@ body {
             background: #edf4ff;
         }
 
-/* ========================================
-   Field Help Text
-======================================== */
-
-.field-group small {
-    margin: 0;
-    color: #718096;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-/* ========================================
-   Concessions
-======================================== */
-
+/* Checkbox options on one line on desktop. */
 .concessions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 12px 18px;
-    margin: 26px 0 24px;
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 24px;
+    width: 100%;
+    margin: 24px 0 20px;
 }
 
 .checkbox-option {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
+    flex: 0 1 auto;
     min-width: 0;
     margin: 0;
     padding: 0;
     color: #244477;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1.4;
+    white-space: nowrap;
     cursor: pointer;
 }
 
     .checkbox-option input[type="checkbox"] {
-        width: 21px;
-        height: 21px;
-        flex: 0 0 21px;
+        width: 19px;
+        height: 19px;
+        flex: 0 0 19px;
         margin: 0;
         padding: 0;
         accent-color: #1769d2;
         cursor: pointer;
     }
 
-/* ========================================
-   Buttons for Standalone Booking Page
-======================================== */
+.status-message {
+    min-height: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
 
+    .status-message:empty {
+        display: none;
+    }
+
+    .status-message.success {
+        color: #16803c;
+    }
+
+    .status-message.error {
+        color: #c62828;
+    }
+
+/* Retain compatibility if the standalone booking page uses these buttons. */
 .button-row {
     display: flex;
     align-items: stretch;
@@ -533,13 +489,13 @@ body {
 
         .button-row button:disabled {
             cursor: not-allowed;
-            opacity: 0.65;
+            opacity: .65;
         }
 
 .primary-button {
     flex: 1 1 auto;
     background: #216bd2;
-    color: #ffffff;
+    color: #fff;
 }
 
     .primary-button:hover:not(:disabled) {
@@ -557,211 +513,339 @@ body {
         background: #d1d5db;
     }
 
-/* ========================================
-   Status Messages
-======================================== */
-
-.status-message {
-    display: none;
-    margin: 0 0 15px;
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-}
-
-    .status-message.success {
-        display: block;
-        border: 1px solid #a7f3d0;
-        background: #ecfdf5;
-        color: #065f46;
-    }
-
-    .status-message.error {
-        display: block;
-        border: 1px solid #fecaca;
-        background: #fef2f2;
-        color: #991b1b;
-    }
-
-/* ========================================
-   Focus Styles
-======================================== */
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-    outline: 2px solid #2878bd;
-    outline-offset: 2px;
-}
-
-/* ========================================
-   Responsive Layout
-======================================== */
-
-@media (max-width: 620px) {
+/* Tablet: preserve a compact layout without squeezing controls excessively. */
+@media (max-width: 900px) {
     .booking-card {
-        padding: 22px 18px;
+        padding: 22px 20px;
     }
 
-    .page-header {
-        margin-bottom: 23px;
-    }
-
-        .page-header h1 {
-            font-size: 25px;
-        }
-
-    .station-grid {
-        gap: 12px;
-        margin-bottom: 20px;
-    }
-
-    .details-grid {
-        gap: 17px 12px;
+    .journey-fields-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 9px;
     }
 
     .input-with-icon,
     .select-with-icon {
-        gap: 7px;
-        padding: 0 8px;
+        gap: 5px;
+        padding: 0 6px;
     }
 
     .field-icon {
-        width: 19px;
-        flex-basis: 19px;
-        font-size: 15px;
+        width: 15px;
+        flex-basis: 15px;
+        font-size: 14px;
     }
 
     .input-with-icon input[type="text"],
     .select-with-icon select {
-        font-size: 14px;
-    }
-
-    .concessions {
-        gap: 13px 10px;
-        margin: 23px 0;
-    }
-
-    .checkbox-option {
-        gap: 7px;
         font-size: 12px;
     }
 
-        .checkbox-option input[type="checkbox"] {
-            width: 19px;
-            height: 19px;
-            flex-basis: 19px;
-        }
-
-    .calendar-popup {
-        width: 280px;
-        min-width: 0;
-        max-width: min(320px, calc(100vw - 36px));
-        padding: 9px;
+    .concessions {
+        gap: 14px;
     }
 
-    .calendar-day {
-        height: 31px;
+    .checkbox-option {
+        gap: 6px;
+        font-size: 12px;
+    }
+}
+
+/* Narrow viewports can wrap into two columns rather than clipping fields. */
+@media (max-width: 700px) {
+    .journey-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 12px;
+    }
+
+    .concessions {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 13px 18px;
+        margin: 22px 0;
+    }
+
+    .checkbox-option {
+        white-space: normal;
+    }
+
+    .page-header h1 {
+        font-size: 25px;
     }
 }
 
 @media (max-width: 400px) {
-    .station-grid,
-    .details-grid,
-    .concessions {
+    .booking-card {
+        padding: 18px 14px;
+    }
+
+    .journey-fields-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .quota-group {
-        grid-column: auto;
+    .concessions {
+        flex-direction: column;
+        gap: 13px;
     }
 
-    .checkbox-option {
-        font-size: 14px;
+    .calendar-popup {
+        width: min(300px, calc(100vw - 28px)) !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 28px) !important;
     }
 }
 
 
-/* ===== Fix Journey Form Scrolling ===== */
+/* ========================================
+   Journey fields: one row on desktop
+======================================== */
 
-html,
-body {
+.journey-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
     width: 100%;
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
 }
 
-.page-container,
-.booking-card {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
+    .journey-fields-grid .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        min-width: 0;
+        margin: 0;
+    }
+
+        .journey-fields-grid .field-group > label {
+            display: block;
+            margin: 0;
+            color: #244477;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+    /* Compact controls to fit all five fields */
+    .journey-fields-grid .input-with-icon,
+    .journey-fields-grid .select-with-icon {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        min-width: 0;
+        height: 46px;
+        margin: 0;
+        padding: 0 8px;
+        border: 1px solid #c3ccd8;
+        border-radius: 5px;
+        background: #fff;
+    }
+
+    .journey-fields-grid .field-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 22px;
+        flex: 0 0 18px;
+        color: #294d83;
+        font-size: 15px;
+    }
+
+    .journey-fields-grid .input-with-icon input[type="text"] {
+        flex: 1 1 auto;
+        width: 0;
+        min-width: 0;
+        height: 42px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: #173b78;
+        font: inherit;
+        font-size: 13px;
+        box-shadow: none;
+    }
+
+    .journey-fields-grid .select-with-icon select {
+        flex: 1 1 auto;
+        width: 0;
+        min-width: 0;
+        height: 42px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: #173b78;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+#fromStation,
+#toStation {
+    font-weight: 700;
 }
 
-/* ===== Date Field ===== */
+/* Station name/code under From and To textboxes */
+.selected-station-display {
+    display: block;
+    min-height: 15px;
+    margin: -2px 0 0;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
 
-.date-field-group {
-    position: relative !important;
+    .selected-station-display:empty {
+        display: none;
+    }
+
+/* Remove helper text spacing under date field */
+.journey-fields-grid .date-field-group > small {
+    display: none;
+}
+
+/* Keep the calendar popup above neighboring fields */
+.journey-fields-grid .date-field-group {
+    position: relative;
+    z-index: 10000;
     min-width: 0;
     overflow: visible !important;
-    z-index: 1000;
 }
 
-.date-input-wrapper {
-    position: relative !important;
+.journey-fields-grid .date-input-wrapper {
+    position: relative;
+    z-index: 10001;
     overflow: visible !important;
-    z-index: 1001;
 }
 
-/* ===== Independent Calendar Popup ===== */
-
-.calendar-popup {
+.journey-fields-grid .calendar-popup {
     position: absolute !important;
     top: calc(100% + 6px) !important;
     left: 0 !important;
+    z-index: 2147483647 !important;
     width: 300px !important;
     min-width: 280px !important;
     max-width: min(320px, calc(100vw - 32px)) !important;
     height: auto !important;
     max-height: none !important;
-    margin: 0 !important;
     overflow: visible !important;
     background: #fff !important;
-    border: 1px solid #d4dce7 !important;
-    border-radius: 8px !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
-    z-index: 2147483647 !important;
-    box-sizing: border-box !important;
 }
 
-    .calendar-popup[hidden] {
+    .journey-fields-grid .calendar-popup[hidden] {
         display: none !important;
     }
 
-/* ===== Calendar Grid ===== */
+/* ========================================
+   Checkboxes: one row on desktop
+======================================== */
 
-.calendar-weekdays,
-.calendar-days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 3px;
-    text-align: center;
+.concessions {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 24px;
+    width: 100%;
+    margin: 24px 0 20px;
 }
 
-/* ===== Responsive ===== */
+.checkbox-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: #244477;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+}
 
-@media (max-width: 620px) {
-    .calendar-popup {
-        width: min(300px, calc(100vw - 32px)) !important;
-        min-width: 0 !important;
-        max-width: calc(100vw - 32px) !important;
+    .checkbox-option input[type="checkbox"] {
+        width: 19px;
+        height: 19px;
+        flex: 0 0 19px;
+        margin: 0;
+        accent-color: #1769d2;
+        cursor: pointer;
+    }
+
+/* Tablet */
+@media (max-width: 900px) {
+    .journey-fields-grid {
+        gap: 9px;
+    }
+
+        .journey-fields-grid .input-with-icon,
+        .journey-fields-grid .select-with-icon {
+            gap: 4px;
+            padding: 0 5px;
+        }
+
+        .journey-fields-grid .field-icon {
+            width: 14px;
+            flex-basis: 14px;
+            font-size: 12px;
+        }
+
+        .journey-fields-grid .input-with-icon input[type="text"],
+        .journey-fields-grid .select-with-icon select {
+            font-size: 11px;
+        }
+
+    .concessions {
+        gap: 14px;
+    }
+
+    .checkbox-option {
+        gap: 6px;
+        font-size: 12px;
     }
 }
 
-#fromStation,
-#toStation {
-    font-weight: 700;
+/* Mobile: allow fields and checkboxes to wrap */
+@media (max-width: 700px) {
+    .journey-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 12px;
+    }
+
+    .concessions {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 13px 18px;
+        margin: 22px 0;
+    }
+
+    .checkbox-option {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 400px) {
+    .journey-fields-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .concessions {
+        flex-direction: column;
+        gap: 13px;
+    }
+
+    .journey-fields-grid .calendar-popup {
+        width: min(300px, calc(100vw - 28px)) !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 28px) !important;
+    }
 }

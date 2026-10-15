@@ -71,7 +71,8 @@ body {
 #bookingFrame {
 	display: block;
 	width: 100%;
-	height: 570px;
+	height: 320px; /* Initial fallback; dashboard.js adjusts it */
+	min-height: 0;
 	margin: 0;
 	padding: 0;
 	border: none;
