@@ -134,9 +134,7 @@
         }
 
         function selectStation(station) {
-            // Compatible with booking.js getStationCode().
-            input.value =
-                `${station.name} - ${station.code}`;
+            input.value = station.code;
 
             closeDropdown();
 

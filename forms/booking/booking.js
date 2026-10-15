@@ -466,9 +466,10 @@ function getRecordName(booking) {
 function getBookingFromForm() {
     const journeyDate = journeyDateInput.value.trim();
 
+
     return {
-        fromStation: fromStationInput.value.trim().toUpperCase(),
-        toStation: toStationInput.value.trim().toUpperCase(),
+        fromStation: getStationCode(fromStationInput.value),
+        toStation: getStationCode(toStationInput.value),
         journeyDate,
         journeyDateKey: isValidJourneyDate(journeyDate)
             ? getDateKey(journeyDate)
@@ -479,6 +480,7 @@ function getBookingFromForm() {
         personWithDisabilityConcession: disabilityInput.checked,
         railwayPassConcession: railwayPassInput.checked
     };
+
 }
 
 // --------------------------------------------------
@@ -505,8 +507,8 @@ async function loadRecordForEditing(recordId) {
                 ? record.booking
                 : record;
 
-        fromStationInput.value = booking.fromStation || "";
-        toStationInput.value = booking.toStation || "";
+        fromStationInput.value = getStationCode(booking.fromStation);
+        toStationInput.value = getStationCode(booking.toStation);
         journeyDateInput.value = normalizeSavedDate(booking.journeyDate);
 
         travelClassInput.value =

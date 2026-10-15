@@ -235,10 +235,10 @@ async function initializeDashboard() {
             login.password || "";
 
         bookingDoc.getElementById("fromStation").value =
-            booking.fromStation || "";
+            getStationCode(booking.fromStation);
 
         bookingDoc.getElementById("toStation").value =
-            booking.toStation || "";
+            getStationCode(booking.toStation);
 
         const dateInput = bookingDoc.getElementById("journeyDate");
 
@@ -401,11 +401,13 @@ async function initializeDashboard() {
                 throw new Error("Enter the User Name and Password.");
             }
 
-            const fromStation =
-                bookingDoc.getElementById("fromStation").value.trim();
+            const fromStation = getStationCode(
+                bookingDoc.getElementById("fromStation").value
+            );
 
-            const toStation =
-                bookingDoc.getElementById("toStation").value.trim();
+            const toStation = getStationCode(
+                bookingDoc.getElementById("toStation").value
+            );
 
             const journeyDate =
                 bookingDoc.getElementById("journeyDate").value.trim();
