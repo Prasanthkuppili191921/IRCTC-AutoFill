@@ -635,12 +635,16 @@ function getDateKey(value) {
 
 
 // Extract station code from a station display value.
+
 function getStationCode(stationName) {
-    const match = String(stationName || "").match(
-        /-\s*([A-Z0-9]{2,5})\s*\(/i
+    const value = String(stationName || "").trim();
+
+    const match = value.match(
+        /-\s*([A-Z0-9]{2,5})(?=\s*(?:\(|$))/i
     );
 
     return match
         ? match[1].toUpperCase()
-        : String(stationName || "").trim().toUpperCase();
+        : value.toUpperCase();
 }
+

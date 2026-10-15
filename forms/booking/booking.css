@@ -760,3 +760,8 @@ body {
         max-width: calc(100vw - 32px) !important;
     }
 }
+
+#fromStation,
+#toStation {
+    font-weight: 700;
+}

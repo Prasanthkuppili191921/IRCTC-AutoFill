@@ -53,7 +53,7 @@
                 .filter(item => item && item.code && item.name)
                 .map(item => ({
                     code: normalize(item.code),
-                    name: normalize(item.name),
+                    name: normalize(item.name).replace(/\s+JN\.?$/, " JN."),
                     state: String(item.state || "").trim()
                 }));
 
@@ -305,30 +305,80 @@
                     return;
                 }
 
+
+                const queryParts = query.match(
+                    /^(.*?)\s*-\s*([A-Z0-9]{1,5})(?:\s*\([^)]*\))?$/
+                );
+
+                const stationNameQuery = queryParts
+                    ? normalize(queryParts[1])
+                    : query;
+
+                const stationCodeQuery = queryParts
+                    ? normalize(queryParts[2])
+                    : query;
+
                 const results = allStations
-                    .filter(station =>
-                        station.code.startsWith(query) ||
-                        station.name.includes(query)
-                    )
+                    .filter(station => {
+                        const code = normalize(station.code);
+                        const name = normalize(station.name);
+                        const display = `${name} - ${code}`;
+
+                        return (
+                            code.startsWith(query) ||
+                            name.includes(query) ||
+                            display.includes(query) ||
+                            (
+                                queryParts &&
+                                name.includes(stationNameQuery) &&
+                                code.startsWith(stationCodeQuery)
+                            )
+                        );
+                    })
                     .sort((a, b) => {
-                        // Exact code match first.
-                        if (a.code === query && b.code !== query) {
+                        const aCode = normalize(a.code);
+                        const bCode = normalize(b.code);
+                        const aName = normalize(a.name);
+                        const bName = normalize(b.name);
+
+                        const aDisplay = `${aName} - ${aCode}`;
+                        const bDisplay = `${bName} - ${bCode}`;
+
+                        // Exact full station value gets highest priority.
+                        if (aDisplay === query && bDisplay !== query) {
                             return -1;
                         }
 
-                        if (b.code === query && a.code !== query) {
+                        if (bDisplay === query && aDisplay !== query) {
                             return 1;
                         }
 
-                        // Then codes starting with the query.
-                        const aCodeMatch = a.code.startsWith(query);
-                        const bCodeMatch = b.code.startsWith(query);
+                        // Then exact station-code match.
+                        if (aCode === query && bCode !== query) {
+                            return -1;
+                        }
+
+                        if (bCode === query && aCode !== query) {
+                            return 1;
+                        }
+
+                        // Then station codes starting with the query.
+                        const aCodeMatch = aCode.startsWith(stationCodeQuery);
+                        const bCodeMatch = bCode.startsWith(stationCodeQuery);
 
                         if (aCodeMatch !== bCodeMatch) {
                             return aCodeMatch ? -1 : 1;
                         }
 
-                        return a.name.localeCompare(b.name);
+                        // Then station names starting with the query.
+                        const aNameMatch = aName.startsWith(stationNameQuery);
+                        const bNameMatch = bName.startsWith(stationNameQuery);
+
+                        if (aNameMatch !== bNameMatch) {
+                            return aNameMatch ? -1 : 1;
+                        }
+
+                        return aName.localeCompare(bName);
                     })
                     .slice(0, MAX_SUGGESTIONS);
 
