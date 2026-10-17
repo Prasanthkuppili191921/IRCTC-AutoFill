@@ -1,0 +1,125 @@
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    padding: 16px;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #263238;
+    background: #fff;
+}
+
+.payment-container {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.form-section {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+    .form-section h2,
+    .payment-mode-title {
+        margin: 0 0 8px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+.payment-mode-description {
+    margin: 0 0 24px;
+    color: #526581;
+    text-align: center;
+    font-size: 13px;
+}
+
+#paymentModeForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.payment-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 2px 0;
+    border: none;
+    background: transparent;
+    color: #333;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+    .payment-option span {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* IRCTC-style radio button */
+    .payment-option input[type="radio"] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: 0 0 20px;
+        width: 20px;
+        height: 20px;
+        margin: 2px 0 0;
+        padding: 0;
+        border: 1px solid #b5b5b5;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+
+        .payment-option input[type="radio"]:checked {
+            border: 5px solid #ff6b35;
+            background: #fff;
+        }
+
+
+    .payment-option:hover {
+        color: #111;
+    }
+
+    /* Focus */
+    .payment-option input[type="radio"]:focus-visible {
+        outline: 2px solid #ffb08f;
+        outline-offset: 2px;
+    }
+
+    /* Unselected radio */
+    .payment-option input[type="radio"]:not(:checked) {
+        border: 1px solid #b5b5b5;
+        background: #fff;
+    }
+
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .payment-option {
+        font-size: 13px;
+    }
+}
+

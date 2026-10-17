@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Mode</title>
+    <link rel="stylesheet" href="payment-mode.css">
+</head>
+<body>
+    <main class="payment-container">
+        <section class="form-section">
+            <h2>Payment Mode</h2>
+            <p class="payment-mode-description">
+                Select your preferred payment method for the journey.
+            </p>
+
+            <form id="paymentModeForm" novalidate>
+                <label class="payment-option">
+                    <input type="radio"
+                           id="paymentOther"
+                           name="paymentMode"
+                           value="other"
+                           checked>
+                    <span>
+                        Pay through Credit &amp; Debit Cards / Net Banking /
+                        Wallets / EMI / UPI_CC / UPI_CL / Rewards and Others
+                    </span>
+                </label>
+
+                <label class="payment-option">
+                    <input type="radio"
+                           id="paymentUpi"
+                           name="paymentMode"
+                           value="bhim-upi">
+                    <span>Pay through BHIM/UPI</span>
+                </label>
+            </form>
+        </section>
+    </main>
+
+    <script src="payment-mode.js"></script>
+</body>
+</html>

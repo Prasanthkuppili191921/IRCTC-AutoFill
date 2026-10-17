@@ -239,6 +239,28 @@ body {
 	}
 }
 
+/* ========================================
+   Payment Mode Frame
+======================================== */
+
+#paymentModeFrame {
+	display: block;
+	width: 100%;
+	height: 240px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 16px;
+	background: #ffffff;
+}
+
+@media (max-width: 480px) {
+	#paymentModeFrame {
+		height: 260px;
+		border-radius: 12px;
+	}
+}
+
 
 
 

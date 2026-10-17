@@ -13,6 +13,7 @@ async function initializeDashboard() {
     const saveButton = document.getElementById("saveDetailsButton");
     const loadButton = document.getElementById("loadJsonButton");
     const statusElement = document.getElementById("dashboardStatus");
+    const paymentModeFrame = document.getElementById("paymentModeFrame");
 
     // The URL determines the record mode.
     // ?id=... means Edit mode; otherwise this is a New Record.
@@ -151,6 +152,24 @@ async function initializeDashboard() {
         return passengerForm;
     }
 
+    function getPaymentModeApi() {
+        const api =
+            paymentModeFrame?.contentWindow?.IRCTCPaymentMode;
+
+        if (
+            !api ||
+            typeof api.read !== "function" ||
+            typeof api.populate !== "function"
+        ) {
+            throw new Error(
+                "Payment Mode integration is unavailable. " +
+                "Check payment-mode.js."
+            );
+        }
+
+        return api;
+    }
+
     try {
         // Do not initialize RecordStorage here.
         // Saving records uses chrome.storage.local only.
@@ -159,7 +178,8 @@ async function initializeDashboard() {
             waitForFrame(loginFrame),
             waitForFrame(bookingFrame),
             waitForFrame(trainSelectionFrame),
-            waitForFrame(passengerDetailsFrame)
+            waitForFrame(passengerDetailsFrame),
+            waitForFrame(paymentModeFrame)
         ]);
 
         const loginDoc = getFrameDocument(loginFrame);
@@ -189,6 +209,7 @@ async function initializeDashboard() {
         }
 
         getPassengerDetailsForm();
+        getPaymentModeApi();
 
         if (recordMode === "edit" && editingRecordId) {
             await loadExistingRecord(editingRecordId);
@@ -306,6 +327,10 @@ async function initializeDashboard() {
 
         getPassengerDetailsForm().setData(
             record.passengerDetails || {}
+        );
+
+        getPaymentModeApi().populate(
+            record.paymentMode || {}
         );
     }
 
@@ -460,6 +485,9 @@ async function initializeDashboard() {
             const passengerDetails =
                 getPassengerDetailsForm().getData();
 
+            const paymentMode = getPaymentModeApi().read(); 
+
+
             if (!passengerDetails) {
                 throw new Error("Passenger Details are unavailable.");
             }
@@ -576,6 +604,7 @@ async function initializeDashboard() {
                     booking,
                     trainSelection,
                     passengerDetails,
+                    paymentMode,
                     updatedAt: now
                 };
             } else {
@@ -587,6 +616,7 @@ async function initializeDashboard() {
                     booking,
                     trainSelection,
                     passengerDetails,
+                    paymentMode,
                     createdAt: now,
                     updatedAt: now
                 });
