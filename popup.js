@@ -49,16 +49,19 @@ async function getSavedRecords() {
     return Array.isArray(records) ? records : [];
 }
 
-
+// Adjust the records list height without changing
+// the record storage or action functionality.
 function adjustPopupHeight() {
     const body = document.body;
     const records = document.getElementById("records");
 
-    if (!body || !records) return;
+    if (!body || !records) {
+        return;
+    }
 
     const maxPopupHeight = 580;
 
-    // Measure the records at their natural height first.
+    // Reset the list to its natural height before measuring.
     records.style.maxHeight = "none";
     records.style.overflowY = "visible";
 
@@ -69,12 +72,10 @@ function adjustPopupHeight() {
         if (totalContentHeight <= maxPopupHeight) {
             records.style.maxHeight = "none";
             records.style.overflowY = "visible";
-            body.style.overflowY = "hidden";
             return;
         }
 
-        // Reserve space for the header, section heading,
-        // body padding and status message.
+        // Reserve space for all content outside the list.
         const fixedContentHeight =
             totalContentHeight - naturalRecordsHeight;
 
@@ -84,18 +85,19 @@ function adjustPopupHeight() {
         );
 
         records.style.maxHeight =
-            `${ availableRecordsHeight } px`;
+            `${availableRecordsHeight}px`;
 
         records.style.overflowY = "auto";
-        body.style.overflowY = "hidden";
     });
 }
 
-
 // Render all saved records.
 async function renderSavedRecords() {
-    const recordsContainer = document.getElementById("records");
-    const recordCount = document.getElementById("recordCount");
+    const recordsContainer =
+        document.getElementById("records");
+
+    const recordCount =
+        document.getElementById("recordCount");
 
     if (!recordsContainer || !recordCount) {
         return;
@@ -107,7 +109,8 @@ async function renderSavedRecords() {
         recordsContainer.replaceChildren();
 
         recordCount.textContent =
-            `${records.length} ${records.length === 1 ? "record" : "records"}`;
+            `${records.length} ${records.length === 1 ? "record" : "records"
+            }`;
 
         if (records.length === 0) {
             recordsContainer.appendChild(createEmptyState());
@@ -120,14 +123,19 @@ async function renderSavedRecords() {
                 createRecordCard(record)
             );
         });
+
         adjustPopupHeight();
     } catch (error) {
-        console.error("Failed to load saved records:", error);
+        console.error(
+            "Failed to load saved records:",
+            error
+        );
 
         recordsContainer.replaceChildren();
 
         const errorMessage = document.createElement("p");
-        errorMessage.textContent = "Unable to load saved records.";
+        errorMessage.textContent =
+            "Unable to load saved records.";
 
         recordsContainer.appendChild(errorMessage);
 
@@ -188,7 +196,8 @@ function createRecordCard(record) {
     route.className = "record-route";
     route.textContent =
         record.name ||
-        `${booking.fromStation || "?"} → ${booking.toStation || "?"}`;
+        `${booking.fromStation || "?"} → ${booking.toStation || "?"
+        }`;
 
     const iconActions = document.createElement("div");
     iconActions.className = "record-icon-actions";
@@ -249,7 +258,9 @@ function createIconActionButton({
     const button = document.createElement("button");
 
     button.type = "button";
-    button.className = `record-icon-button ${className}`;
+    button.className =
+        `record-icon-button ${className}`;
+
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
 
@@ -299,7 +310,9 @@ function editRecord(recordId) {
     }
 
     const url =
-        chrome.runtime.getURL("forms/dashboard/dashboard.html") +
+        chrome.runtime.getURL(
+            "forms/dashboard/dashboard.html"
+        ) +
         "?id=" +
         encodeURIComponent(recordId);
 
@@ -316,7 +329,10 @@ function editRecord(recordId) {
 // Delete the selected record from chrome.storage.local.
 async function deleteRecord(recordId) {
     if (!recordId) {
-        showStatus("Unable to identify this record.", "error");
+        showStatus(
+            "Unable to identify this record.",
+            "error"
+        );
         return;
     }
 
@@ -349,9 +365,15 @@ async function deleteRecord(recordId) {
 
         await renderSavedRecords();
 
-        showStatus("Journey deleted successfully.", "success");
+        showStatus(
+            "Journey deleted successfully.",
+            "success"
+        );
     } catch (error) {
-        console.error("Failed to delete record:", error);
+        console.error(
+            "Failed to delete record:",
+            error
+        );
 
         showStatus(
             "Unable to delete the record. Please try again.",
