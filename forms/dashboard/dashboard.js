@@ -1,4 +1,5 @@
-﻿"use strict";
+﻿
+"use strict";
 
 const RECORDS_STORAGE_KEY = "bookingRecords";
 
@@ -13,12 +14,19 @@ async function initializeDashboard() {
     const loadButton = document.getElementById("loadJsonButton");
     const statusElement = document.getElementById("dashboardStatus");
 
-    let editingRecordId = new URLSearchParams(window.location.search).get("id");
+    // The URL determines the record mode.
+    // ?id=... means Edit mode; otherwise this is a New Record.
+    let editingRecordId = new URLSearchParams(
+        window.location.search
+    ).get("id");
+
+    let recordMode = editingRecordId ? "edit" : "new";
     let isSaving = false;
     let isLoading = false;
-    let previousBookingFrameHeight = "";
 
     function showStatus(message, type = "") {
+        if (!statusElement) return;
+
         statusElement.textContent = "";
         statusElement.className = type;
 
@@ -36,25 +44,22 @@ async function initializeDashboard() {
         statusElement.textContent = message;
     }
 
-    // Journey Details calendar iframe messages.
-    // Journey Details iframe: adjust height to its actual content.
-    window.addEventListener("message", function (event) {
+    // Journey Details iframe height.
+    window.addEventListener("message", event => {
         if (event.origin !== window.location.origin) return;
         if (event.source !== bookingFrame.contentWindow) return;
-
         if (event.data?.type !== "IRCTC_BOOKING_HEIGHT") return;
 
         const height = Number(event.data.height);
 
         if (!Number.isFinite(height) || height <= 0) return;
 
-        // Prevent accidental oversized iframe values.
         bookingFrame.style.height =
             `${Math.min(Math.ceil(height), 1200)}px`;
     });
 
     // Passenger Details iframe height.
-    window.addEventListener("message", function (event) {
+    window.addEventListener("message", event => {
         if (event.origin !== window.location.origin) return;
         if (event.source !== passengerDetailsFrame.contentWindow) return;
         if (event.data?.type !== "PASSENGER_DETAILS_HEIGHT") return;
@@ -83,7 +88,9 @@ async function initializeDashboard() {
             frame.addEventListener(
                 "error",
                 () => reject(
-                    new Error(`Unable to load ${frame.title || "a form"}.`)
+                    new Error(
+                        `Unable to load ${frame.title || "a form"}.`
+                    )
                 ),
                 { once: true }
             );
@@ -145,7 +152,8 @@ async function initializeDashboard() {
     }
 
     try {
-        await RecordStorage.initialize();
+        // Do not initialize RecordStorage here.
+        // Saving records uses chrome.storage.local only.
 
         await Promise.all([
             waitForFrame(loginFrame),
@@ -182,7 +190,7 @@ async function initializeDashboard() {
 
         getPassengerDetailsForm();
 
-        if (editingRecordId) {
+        if (recordMode === "edit" && editingRecordId) {
             await loadExistingRecord(editingRecordId);
         }
 
@@ -202,9 +210,12 @@ async function initializeDashboard() {
         }
     }
 
-    // Restore a record into all forms.
+    // Populate all forms from a record.
+    // IMPORTANT: This function does not change recordMode or editingRecordId.
     async function loadExistingRecord(recordId) {
-        const result = await chrome.storage.local.get(RECORDS_STORAGE_KEY);
+        const result = await chrome.storage.local.get(
+            RECORDS_STORAGE_KEY
+        );
 
         const records = Array.isArray(result[RECORDS_STORAGE_KEY])
             ? result[RECORDS_STORAGE_KEY]
@@ -216,6 +227,11 @@ async function initializeDashboard() {
             throw new Error("Saved record was not found.");
         }
 
+        populateForms(record);
+    }
+
+    // Populate forms from either a saved local record or an imported JSON record.
+    function populateForms(record) {
         const loginDoc = getFrameDocument(loginFrame);
         const bookingDoc = getFrameDocument(bookingFrame);
 
@@ -228,7 +244,6 @@ async function initializeDashboard() {
         loginDoc.getElementById("password").value =
             login.password || "";
 
-        // Restore From and To values before refreshing station labels.
         const fromStationInput =
             bookingDoc.getElementById("fromStation");
 
@@ -241,7 +256,6 @@ async function initializeDashboard() {
         toStationInput.value =
             getStationCode(booking.toStation);
 
-        // Dispatch events using the booking iframe's Event constructor.
         const FrameEvent = bookingFrame.contentWindow.Event;
 
         fromStationInput.dispatchEvent(
@@ -290,13 +304,14 @@ async function initializeDashboard() {
 
         populateTrainSelection(trainSelection);
 
-        // Backward compatibility: older records may not have passengerDetails.
         getPassengerDetailsForm().setData(
             record.passengerDetails || {}
         );
     }
 
-    // Import JSON records and optionally load one into the forms.
+    // Import JSON and load the selected record into the forms.
+    // This does not insert records into local storage and does not change
+    // New/Edit mode. The Save button decides the operation using recordMode.
     async function loadJsonRecords() {
         if (isLoading || isSaving) return;
 
@@ -310,27 +325,21 @@ async function initializeDashboard() {
         showStatus("");
 
         try {
-            const records = await RecordStorage.readRecords();
+            const importedRecords = await RecordStorage.readRecords();
 
-            if (records.length === 0) {
-                await chrome.storage.local.set({
-                    [RECORDS_STORAGE_KEY]: []
-                });
-
+            if (!importedRecords.length) {
                 showStatus(
                     "JSON file contains no records.",
-                    "success"
+                    "error"
                 );
                 return;
             }
 
-            await chrome.storage.local.set({
-                [RECORDS_STORAGE_KEY]: records
-            });
-
-            const options = records.map((record, index) => {
+            const options = importedRecords.map((record, index) => {
                 const label =
-                    record.name || record.id || `Record ${index + 1}`;
+                    record.name ||
+                    record.id ||
+                    `Record ${index + 1}`;
 
                 return `${index + 1}. ${label}`;
             });
@@ -342,10 +351,6 @@ async function initializeDashboard() {
             );
 
             if (answer === null) {
-                showStatus(
-                    `${records.length} record(s) imported from JSON.`,
-                    "success"
-                );
                 return;
             }
 
@@ -354,12 +359,12 @@ async function initializeDashboard() {
             if (
                 !Number.isInteger(selectedIndex) ||
                 selectedIndex < 0 ||
-                selectedIndex >= records.length
+                selectedIndex >= importedRecords.length
             ) {
                 throw new Error("Invalid record number.");
             }
 
-            const selectedRecord = records[selectedIndex];
+            const selectedRecord = importedRecords[selectedIndex];
 
             if (
                 !selectedRecord ||
@@ -368,12 +373,14 @@ async function initializeDashboard() {
                 throw new Error("Selected record has an invalid ID.");
             }
 
-            editingRecordId = selectedRecord.id;
-
-            await loadExistingRecord(editingRecordId);
+            // Only populate the form.
+            // Do not set editingRecordId to the imported record's ID.
+            // Do not change recordMode.
+            populateForms(selectedRecord);
 
             showStatus(
-                `Loaded: ${selectedRecord.name || selectedRecord.id}`,
+                `Loaded: ${selectedRecord.name || selectedRecord.id}. ` +
+                `Save mode: ${recordMode === "edit" ? "Edit" : "New Record"}.`,
                 "success"
             );
         } catch (error) {
@@ -395,7 +402,7 @@ async function initializeDashboard() {
         }
     }
 
-    // Save or update all form details in Chrome storage and the JSON file.
+    // Save or update according to recordMode only.
     async function saveAllDetails() {
         if (isSaving || isLoading) return;
 
@@ -406,13 +413,6 @@ async function initializeDashboard() {
         showStatus("");
 
         try {
-            /*
-             * IMPORTANT:
-             * Call prepareForWrite immediately in the click handler.
-             * If no JSON file has been selected previously, this opens
-             * the Save File picker while the user click is still active.
-             */
-
             const loginDoc = getFrameDocument(loginFrame);
             const bookingDoc = getFrameDocument(bookingFrame);
 
@@ -461,13 +461,9 @@ async function initializeDashboard() {
                 getPassengerDetailsForm().getData();
 
             if (!passengerDetails) {
-                return;
+                throw new Error("Passenger Details are unavailable.");
             }
 
-            /*
-             * Keep the current Train Selection validation compatible
-             * with forms that provide matchingRule.
-             */
             if (
                 trainSelection.matchingRule === "number" &&
                 !trainSelection.trainNumber
@@ -537,8 +533,9 @@ async function initializeDashboard() {
                 trainSelection
             };
 
-            const result =
-                await chrome.storage.local.get(RECORDS_STORAGE_KEY);
+            const result = await chrome.storage.local.get(
+                RECORDS_STORAGE_KEY
+            );
 
             const records = Array.isArray(
                 result[RECORDS_STORAGE_KEY]
@@ -553,22 +550,25 @@ async function initializeDashboard() {
                 `${getStationCode(toStation)}`;
 
             const login = { username, password };
-            const wasEditing = Boolean(editingRecordId);
 
-            let newRecordId = null;
+            if (recordMode === "edit") {
+                if (!editingRecordId) {
+                    throw new Error(
+                        "Cannot update record: record ID is missing."
+                    );
+                }
 
-            if (editingRecordId) {
                 const index = records.findIndex(
-                    item => item.id === editingRecordId
+                    record => record.id === editingRecordId
                 );
 
                 if (index === -1) {
                     throw new Error(
-                        "Saved record no longer exists."
+                        "Record to update was not found."
                     );
                 }
 
-                // Preserve all other existing record properties.
+                // Edit mode: update only the target record.
                 records[index] = {
                     ...records[index],
                     name,
@@ -579,10 +579,9 @@ async function initializeDashboard() {
                     updatedAt: now
                 };
             } else {
-                newRecordId = crypto.randomUUID();
-
+                // New mode: every save creates a separate record.
                 records.push({
-                    id: newRecordId,
+                    id: crypto.randomUUID(),
                     name,
                     login,
                     booking,
@@ -593,19 +592,15 @@ async function initializeDashboard() {
                 });
             }
 
-            // Update Chrome storage after the JSON write succeeds.
+            // All records are stored in Chrome local storage.
             await chrome.storage.local.set({
                 [RECORDS_STORAGE_KEY]: records
             });
 
-            if (newRecordId) {
-                editingRecordId = newRecordId;
-            }
-
             showStatus(
-                wasEditing
-                    ? "Details updated in JSON successfully."
-                    : "Details saved to JSON successfully.",
+                recordMode === "edit"
+                    ? "Record updated successfully."
+                    : "New record created successfully.",
                 "success"
             );
 
@@ -628,7 +623,6 @@ async function initializeDashboard() {
     }
 }
 
-
 // Normalize supported date formats.
 function normalizeDate(value) {
     if (typeof value !== "string") return "";
@@ -646,7 +640,6 @@ function normalizeDate(value) {
 
     return "";
 }
-
 
 // Validate DD/MM/YYYY.
 function isValidDate(value) {
@@ -667,14 +660,12 @@ function isValidDate(value) {
     );
 }
 
-
 // Convert DD/MM/YYYY to YYYY-MM-DD.
 function getDateKey(value) {
     const [day, month, year] = value.split("/");
 
     return `${year}-${month}-${day}`;
 }
-
 
 // Extract station code from a station display value.
 function getStationCode(stationName) {

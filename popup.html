@@ -4,233 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>IRCTC AutoFill</title>
+
     <link rel="stylesheet" href="common/toast.css">
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            width: 380px;
-            min-height: 180px;
-            max-height: 580px;
-            margin: 0;
-            padding: 16px;
-            color: #243653;
-            background: #f7f9fc;
-            font-family: Arial, sans-serif;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            flex-shrink: 0;
-            border-radius: 10px;
-            color: white;
-            background: #087e8b;
-            font-size: 21px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 19px;
-        }
-
-        .header p {
-            margin: 4px 0 0;
-            color: #718096;
-            font-size: 12px;
-        }
-
-        #fillNewForm {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            min-height: 44px;
-            padding: 11px 14px;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            background: #087e8b;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-            #fillNewForm:hover {
-                background: #066873;
-            }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 22px 0 12px;
-        }
-
-            .section-header h2 {
-                margin: 0;
-                font-size: 15px;
-            }
-
-        #recordCount {
-            color: #718096;
-            font-size: 12px;
-        }
-
-        #records {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 360px;
-            overflow-y: auto;
-        }
-
-        .record-card {
-            padding: 12px;
-            border: 1px solid #e0e6ef;
-            border-radius: 9px;
-            background: white;
-        }
-
-        .record-route {
-            margin: 0;
-            color: #243653;
-            font-size: 14px;
-            font-weight: 700;
-            overflow-wrap: anywhere;
-        }
-
-        .record-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .record-tag {
-            padding: 4px 7px;
-            border-radius: 5px;
-            color: #4a5d75;
-            background: #eef2f7;
-            font-size: 11px;
-        }
-
-        .record-actions {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 7px;
-            margin-top: 12px;
-        }
-
-            .record-actions button {
-                min-width: 0;
-                padding: 8px 4px;
-                border: 1px solid #d8e0eb;
-                border-radius: 6px;
-                background: white;
-                color: #34445b;
-                font-size: 12px;
-                cursor: pointer;
-            }
-
-                .record-actions button:hover {
-                    background: #f0f4f9;
-                }
-
-            .record-actions .autofill-button {
-                border-color: #087e8b;
-                color: white;
-                background: #087e8b;
-            }
-
-                .record-actions .autofill-button:hover {
-                    background: #066873;
-                }
-
-            .record-actions .delete-button {
-                color: #b42318;
-            }
-
-        .empty-state {
-            padding: 26px 14px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 9px;
-            background: white;
-            text-align: center;
-        }
-
-        .empty-icon {
-            margin-bottom: 9px;
-            color: #8190a5;
-            font-size: 27px;
-        }
-
-        .empty-state h3 {
-            margin: 0 0 6px;
-            font-size: 14px;
-        }
-
-        .empty-state p {
-            margin: 0;
-            color: #718096;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        #status {
-            margin: 12px 0 0;
-            font-size: 12px;
-            line-height: 1.5;
-            overflow-wrap: anywhere;
-        }
-
-            #status:empty {
-                display: none;
-            }
-
-            #status.error {
-                color: #b42318;
-            }
-
-            #status.success {
-                color: #087e8b;
-            }
-
-        button:focus-visible {
-            outline: 2px solid #2878bd;
-            outline-offset: 2px;
-        }
-    </style>
+    <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
     <header class="header">
         <div class="logo" aria-hidden="true">IR</div>
-        <div>
+
+        <div class="header-content">
             <h1>IRCTC AutoFill</h1>
             <p>Manage your saved booking records</p>
         </div>
-    </header>
 
-    <button id="fillNewForm" type="button">
-        <span aria-hidden="true">＋</span>
-        <span>Fill New Form</span>
-    </button>
+        <button id="fillNewForm"
+                class="add-record-button"
+                type="button"
+                aria-label="Create new booking record"
+                title="Create new record">
+            <span aria-hidden="true">+</span>
+        </button>
+    </header>
 
     <section aria-labelledby="recordsHeading">
         <div class="section-header">
@@ -242,7 +39,7 @@
             <div class="empty-state">
                 <div class="empty-icon" aria-hidden="true">▤</div>
                 <h3>No saved records yet</h3>
-                <p>Select “Fill New Form” to create your first record.</p>
+                <p>Create your first record using the + button above.</p>
             </div>
         </div>
     </section>

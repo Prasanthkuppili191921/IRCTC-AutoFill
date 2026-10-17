@@ -1,0 +1,359 @@
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 380px;
+    min-height: 180px;
+    max-height: 580px;
+    margin: 0;
+    padding: 16px;
+    color: #243653;
+    background: #f7f9fc;
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Header */
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    color: white;
+    background: #087e8b;
+    font-size: 21px;
+}
+
+.header-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 19px;
+}
+
+.header p {
+    margin: 4px 0 0;
+    color: #718096;
+    font-size: 12px;
+}
+
+/* Add new record button */
+
+.add-record-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    color: #087e8b;
+    background: transparent;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+    .add-record-button:hover {
+        color: #087e8b;
+        background: transparent;
+        transform: scale(1.2);
+    }
+
+    .add-record-button:focus,
+    .add-record-button:active {
+        color: #087e8b;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .add-record-button:focus-visible {
+        outline: 2px solid #087e8b;
+        outline-offset: 2px;
+    }
+
+/* Saved Records heading and count */
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 22px 0 12px;
+}
+
+    .section-header h2 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+#recordCount {
+    color: #718096;
+    font-size: 12px;
+}
+
+/* Records container
+   Do not scroll this container independently.
+   Let the popup grow with its contents. */
+
+#records {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+}
+
+/* Record card */
+
+.record-card {
+    flex: 0 0 auto;
+    padding: 12px;
+    border: 1px solid #e0e6ef;
+    border-radius: 9px;
+    background: white;
+}
+
+/* Route/title and Edit/Delete icons */
+
+.record-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.record-route {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: #243653;
+    font-size: 14px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.record-icon-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+/* Edit and Delete icon buttons */
+
+.record-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    color: #34445b;
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+    .record-icon-button:hover {
+        transform: scale(1.2);
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .record-icon-button:focus,
+    .record-icon-button:active {
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .record-icon-button.edit-icon-button {
+        color: #34445b;
+    }
+
+        .record-icon-button.edit-icon-button:hover {
+            color: #087e8b;
+        }
+
+    .record-icon-button.delete-icon-button {
+        color: #b42318;
+        font-size: 23px;
+    }
+
+        .record-icon-button.delete-icon-button:hover {
+            color: #e11d48;
+        }
+
+    .record-icon-button:focus-visible {
+        outline: 2px solid #087e8b;
+        outline-offset: 2px;
+    }
+
+/* Record metadata */
+
+.record-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.record-tag {
+    padding: 4px 7px;
+    border-radius: 5px;
+    color: #4a5d75;
+    background: #eef2f7;
+    font-size: 11px;
+}
+
+/* Full-width Auto-Fill button */
+
+.record-actions {
+    display: flex;
+    width: 100%;
+    margin-top: 12px;
+}
+
+    .record-actions button {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid #d8e0eb;
+        border-radius: 6px;
+        color: #34445b;
+        background: white;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+        .record-actions button:hover {
+            background: #f0f4f9;
+        }
+
+    .record-actions .autofill-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 36px;
+        padding: 9px 10px;
+        border: 1px solid #087e8b;
+        border-radius: 6px;
+        color: white;
+        background: #087e8b;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+        .record-actions .autofill-button:hover {
+            background: #066873;
+        }
+
+/* Empty state */
+
+.empty-state {
+    padding: 26px 14px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 9px;
+    background: white;
+    text-align: center;
+}
+
+.empty-icon {
+    margin-bottom: 9px;
+    color: #8190a5;
+    font-size: 27px;
+}
+
+.empty-state h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+}
+
+.empty-state p {
+    margin: 0;
+    color: #718096;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Status message */
+
+#status {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+    #status:empty {
+        display: none;
+    }
+
+    #status.error {
+        color: #b42318;
+    }
+
+    #status.success {
+        color: #087e8b;
+    }
+
+/* Keyboard focus */
+
+button:focus-visible {
+    outline: 2px solid #2878bd;
+    outline-offset: 2px;
+}
+
+/* Thin popup scrollbar */
+
+body::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+}
+
+body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+    body::-webkit-scrollbar-thumb:hover {
+        background: #666;
+    }
