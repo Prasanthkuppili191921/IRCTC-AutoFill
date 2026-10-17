@@ -5,7 +5,8 @@
   "description": "Fill passenger details on IRCTC booking forms.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://raw.githubusercontent.com/*"
@@ -27,7 +28,9 @@
     }
   ],
   "action": {
-    "default_title": "IRCTC AutoFill",
-    "default_popup": "popup.html"
+    "default_title": "IRCTC AutoFill"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   }
 }
