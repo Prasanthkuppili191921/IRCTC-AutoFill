@@ -19,6 +19,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             booking.passengerDetails ||
             {};
 
+        const paymentMode = message.paymentMode || {};
+
         chrome.tabs.query(
             { active: true, lastFocusedWindow: true },
             async (tabs) => {
@@ -116,6 +118,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                     login,
                                     booking,
                                     passengerDetails,
+                                    paymentMode,
                                     createdAt: Date.now()
                                 }
                             });
@@ -147,6 +150,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                     login,
                                     booking,
                                     passengerDetails,
+                                    paymentMode,
                                     createdAt: Date.now()
                                 }
                             });
@@ -171,7 +175,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // --------------------------
                         // PASSENGER DETAILS PAGE
                         // --------------------------
-
                         case "passenger": {
                             const passengers = Array.isArray(
                                 passengerDetails.passengers
@@ -191,13 +194,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 return;
                             }
 
-                            const result = await chrome.tabs.sendMessage(
+                            // Passenger pageలో pending data ముందుగా save చేయాలి.
+                            // Form ఇంకా render కాకపోతే content-3.js retry చేయగలదు.
+                            await chrome.storage.session.set({
+                                [PENDING_KEY]: {
+                                    tabId: tab.id,
+                                    login,
+                                    booking,
+                                    passengerDetails,
+                                    paymentMode,
+                                    createdAt: Date.now()
+                                }
+                            });
+
+                            result = await chrome.tabs.sendMessage(
                                 tab.id,
                                 {
                                     action: "PAGE_AWARE_AUTOFILL",
                                     login,
                                     booking,
-                                    passengerDetails
+                                    passengerDetails,
+                                    paymentMode
                                 }
                             );
 
@@ -212,7 +229,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                             return;
                         }
-
 
                         // --------------------------
                         // UNSUPPORTED PAGE
@@ -308,4 +324,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 });
-

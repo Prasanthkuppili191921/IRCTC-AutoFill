@@ -1,4 +1,3 @@
-
 "use strict";
 
 (() => {
@@ -10,15 +9,31 @@
 
     const DEFAULT_PAYMENT_MODE = "other";
 
-    function read() {
+    const optionsContainer = document.getElementById(
+        "paymentOptionsContainer"
+    );
+
+    function getSelectedMode() {
         const selected = form.querySelector(
             'input[name="paymentMode"]:checked'
         );
 
+        return selected
+            ? selected.value
+            : DEFAULT_PAYMENT_MODE;
+    }
+
+    function updatePaymentOptionsMode() {
+        const paymentMode = getSelectedMode();
+
+        if (optionsContainer) {
+            optionsContainer.dataset.paymentMode = paymentMode;
+        }
+    }
+
+    function read() {
         return {
-            paymentMode: selected
-                ? selected.value
-                : DEFAULT_PAYMENT_MODE
+            paymentMode: getSelectedMode()
         };
     }
 
@@ -35,10 +50,22 @@
         if (radio) {
             radio.checked = true;
         }
+
+        updatePaymentOptionsMode();
     }
+
+    form.addEventListener("change", event => {
+        if (
+            event.target.matches('input[name="paymentMode"]')
+        ) {
+            updatePaymentOptionsMode();
+        }
+    });
 
     window.IRCTCPaymentMode = {
         read,
         populate
     };
+
+    updatePaymentOptionsMode();
 })();

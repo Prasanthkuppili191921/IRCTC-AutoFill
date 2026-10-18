@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,30 +10,42 @@
     <main class="payment-container">
         <section class="form-section">
             <h2>Payment Mode</h2>
+
             <p class="payment-mode-description">
                 Select your preferred payment method for the journey.
             </p>
 
             <form id="paymentModeForm" novalidate>
-                <label class="payment-option">
-                    <input type="radio"
-                           id="paymentOther"
-                           name="paymentMode"
-                           value="other"
-                           checked>
-                    <span>
-                        Pay through Credit &amp; Debit Cards / Net Banking /
-                        Wallets / EMI / UPI_CC / UPI_CL / Rewards and Others
-                    </span>
-                </label>
+                <div class="payment-mode-options" role="radiogroup"
+                     aria-label="Payment Mode">
 
-                <label class="payment-option">
-                    <input type="radio"
-                           id="paymentUpi"
-                           name="paymentMode"
-                           value="bhim-upi">
-                    <span>Pay through BHIM/UPI</span>
-                </label>
+                    <label class="payment-option" for="paymentOther">
+                        <input type="radio"
+                               id="paymentOther"
+                               name="paymentMode"
+                               value="other"
+                               checked>
+                        <span>
+                            Pay through Credit &amp; Debit Cards / Net Banking /
+                            Wallets / EMI / UPI_CC / UPI_CL / Rewards and Others
+                        </span>
+                    </label>
+
+                    <label class="payment-option" for="paymentUpi">
+                        <input type="radio"
+                               id="paymentUpi"
+                               name="paymentMode"
+                               value="bhim-upi">
+                        <span>Pay through BHIM/UPI</span>
+                    </label>
+                </div>
+
+                <!-- Selected payment mode-specific options will appear here -->
+                <div id="paymentOptionsContainer"
+                     class="payment-options-container"
+                     data-payment-mode="other"
+                     aria-live="polite">
+                </div>
             </form>
         </section>
     </main>

@@ -6,8 +6,8 @@
 // File: content/content-3.js
 //
 // Existing content-1.js and content-2.js remain unchanged.
-// This file only detects the active IRCTC page and routes
-// new page-aware requests to existing handlers.
+// This file detects the active IRCTC page and routes
+// page-aware requests to existing handlers.
 // ======================================================
 
 const PageAwareAutofill = (() => {
@@ -100,9 +100,7 @@ const PageAwareAutofill = (() => {
                     .join(" ")
                     .toLowerCase();
 
-                return (
-                    /passenger.?name|psgn.?name/.test(description)
-                );
+                return /passenger.?name|psgn.?name/.test(description);
             });
 
         const bodyText = normalizeText(
@@ -194,17 +192,13 @@ const PageAwareAutofill = (() => {
         };
     }
 
-
     // --------------------------------------------------
     // TRAIN LIST PAGE HANDLER
     // --------------------------------------------------
 
-
-
     async function handleTrainListPageAutofill(message) {
         const booking = message?.booking || {};
 
-        // Auto-Fill form నుంచి వచ్చిన saved record మాత్రమే source.
         const trainNumber = String(
             booking.trainSelection?.trainNumber ||
             booking.trainNumber ||
@@ -245,11 +239,11 @@ const PageAwareAutofill = (() => {
             flexibleDate
         });
 
-        // Required saved values validation
         if (!fromStation || !toStation || !journeyDate) {
             return {
                 success: false,
-                message: "Auto-Fill formలో From Station, To Station లేదా Journey Date missing ఉంది.",
+                message:
+                    "Auto-Fill formలో From Station, To Station లేదా Journey Date missing ఉంది.",
                 pageType: "train-list"
             };
         }
@@ -279,7 +273,6 @@ const PageAwareAutofill = (() => {
         }
 
         try {
-            // Train number, class, date అన్నీ saved form నుంచే.
             const result = await checkSavedTrainOnPage(
                 trainNumber,
                 travelClass,
@@ -308,19 +301,16 @@ const PageAwareAutofill = (() => {
 
             return {
                 success: false,
-                message: error?.message || "Train List Auto-Fill failed.",
+                message:
+                    error?.message || "Train List Auto-Fill failed.",
                 pageType: "train-list"
             };
         }
     }
 
-
-
     // --------------------------------------------------
     // PASSENGER PAGE HANDLER
     // --------------------------------------------------
-
-
 
     async function handlePassengerPageAutofill(message) {
         const passengerDetails =
@@ -378,8 +368,6 @@ const PageAwareAutofill = (() => {
         };
     }
 
-
-
     // --------------------------------------------------
     // PAGE-AWARE DISPATCHER
     // --------------------------------------------------
@@ -428,8 +416,6 @@ const PageAwareAutofill = (() => {
 
 // ------------------------------------------------------
 // MESSAGE HANDLER
-// Uses new action names to avoid conflicts with the
-// existing message handlers in content-1.js/content-2.js.
 // ------------------------------------------------------
 
 chrome.runtime.onMessage.addListener(
@@ -471,9 +457,12 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+// ======================================================
+// AUTOMATIC PASSENGER AND PAYMENT MODE AUTOFILL
+// ======================================================
 
 (() => {
-    let lastProcessedUrl = "";
+    let lastProcessedKey = "";
     let processing = false;
 
     const sleep = ms =>
@@ -481,6 +470,22 @@ chrome.runtime.onMessage.addListener(
 
     function isPassengerPage() {
         return /psgninput|passenger-details/i.test(location.href);
+    }
+
+    function isPaymentPage() {
+        const paymentRadio = document.querySelector(
+            'input[name="paymentType"][value="2"], ' +
+            'input[name="paymentType"][value="3"]'
+        );
+
+        if (paymentRadio && paymentRadio.getClientRects().length > 0) {
+            return true;
+        }
+
+        return /payment|bank|bhim|upi/i.test(location.href) ||
+            /payment mode|bhim\s*\/?\s*upi/i.test(
+                document.body?.innerText || ""
+            );
     }
 
     function passengerFormReady() {
@@ -491,14 +496,116 @@ chrome.runtime.onMessage.addListener(
         ));
     }
 
-    async function tryPendingPassengerAutofill() {
+    function normalizeText(value) {
+        return String(value || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
+    }
+
+    async function selectSavedPaymentMode(paymentModeData) {
+        const mode =
+            paymentModeData?.paymentMode || paymentModeData;
+
+        const expectedValue =
+            mode === "bhim-upi" ? "2" :
+                mode === "other" ? "3" :
+                    null;
+
+        if (!expectedValue) {
+            console.warn(
+                "[IRCTC Payment] Invalid or missing saved mode:",
+                paymentModeData
+            );
+
+            return {
+                success: false,
+                reason: "missing-payment-mode"
+            };
+        }
+
+        const deadline = Date.now() + 15000;
+
+        while (Date.now() < deadline) {
+            const radio = document.querySelector(
+                `input[name="paymentType"][value="${expectedValue}"]`
+            );
+
+            if (radio && radio.getClientRects().length > 0) {
+                const radioBox = radio
+                    .closest("p-radiobutton")
+                    ?.querySelector(".ui-radiobutton-box");
+
+                const isSelected = () =>
+                    radio.checked ||
+                    radio.closest("p-radiobutton")
+                        ?.querySelector('[role="radio"]')
+                        ?.getAttribute("aria-checked") === "true";
+
+                if (isSelected()) {
+                    console.log(
+                        "[IRCTC Payment] Already selected:",
+                        expectedValue
+                    );
+
+                    return { success: true };
+                }
+
+                if (radioBox) {
+                    radioBox.click();
+                } else {
+                    radio.click();
+                }
+
+                await sleep(300);
+
+                if (isSelected()) {
+                    console.log(
+                        "[IRCTC Payment] Selected successfully:",
+                        expectedValue
+                    );
+
+                    return { success: true };
+                }
+
+                console.warn(
+                    "[IRCTC Payment] Click attempted; selection not confirmed.",
+                    expectedValue
+                );
+            }
+
+            await sleep(500);
+        }
+
+        console.warn(
+            "[IRCTC Payment] Payment option was not selected:",
+            expectedValue
+        );
+
+        return {
+            success: false,
+            reason: "option-not-confirmed"
+        };
+    }
+
+    async function tryPendingAutofill() {
         const url = location.href;
 
-        if (!isPassengerPage()) {
+        // Payment page detection must take priority.
+        const paymentPage = isPaymentPage();
+        const passengerPage = !paymentPage && isPassengerPage();
+
+        if (!passengerPage && !paymentPage) {
             return;
         }
 
-        if (processing || lastProcessedUrl === url) {
+        // Same URL can display passenger and payment steps in an SPA.
+        const processKey = paymentPage
+            ? `payment:${url}`
+            : `passenger:${url}`;
+
+
+        if (!paymentPage && lastProcessedKey === processKey) {
             return;
         }
 
@@ -515,12 +622,35 @@ chrome.runtime.onMessage.addListener(
 
             const pending = response.pending;
 
+            if (paymentPage) {
+                const result = await selectSavedPaymentMode(
+                    pending.paymentMode ||
+                    pending.booking?.paymentMode
+                );
+
+                if (result.success) {
+                    lastProcessedKey = processKey;
+
+                    await chrome.runtime.sendMessage({
+                        action: "CLEAR_PENDING_AUTOFILL"
+                    });
+
+                    console.log(
+                        "[IRCTC Payment] Payment mode selected."
+                    );
+                }
+
+                return;
+            }
+
             const passengerDetails =
                 pending.passengerDetails ||
                 pending.booking?.passengerDetails ||
                 {};
 
-            const passengers = Array.isArray(passengerDetails.passengers)
+            const passengers = Array.isArray(
+                passengerDetails.passengers
+            )
                 ? passengerDetails.passengers
                 : Array.isArray(pending.booking?.passengers)
                     ? pending.booking.passengers
@@ -530,12 +660,11 @@ chrome.runtime.onMessage.addListener(
 
             if (passengers.length === 0) {
                 console.warn(
-                    "[IRCTC Passenger] Pending recordలో passengers లేరు."
+                    "[IRCTC Passenger] Saved passenger details missing."
                 );
                 return;
             }
 
-            // Angular passenger form render అయ్యే వరకు వేచి ఉండాలి.
             const deadline = Date.now() + 15000;
 
             while (
@@ -546,15 +675,9 @@ chrome.runtime.onMessage.addListener(
             }
 
             if (!passengerFormReady()) {
-                console.warn(
-                    "[IRCTC Passenger] Passenger form 15 seconds‌లో load కాలేదు."
-                );
                 return;
             }
 
-            // IMPORTANT:
-            // handlePassengerPageAutofill private function‌ను నేరుగా
-            // call చేయకూడదు. Public PageAwareAutofill API వాడాలి.
             const result =
                 await PageAwareAutofill.handlePageAwareAutofill({
                     passengerDetails,
@@ -563,31 +686,23 @@ chrome.runtime.onMessage.addListener(
                 });
 
             console.log(
-                "[IRCTC Passenger] Pending autofill result:",
+                "[IRCTC Passenger] Autofill result:",
                 result
             );
 
             if (result?.success) {
-                lastProcessedUrl = url;
+                lastProcessedKey = processKey;
 
-                await chrome.runtime.sendMessage({
-                    action: "CLEAR_PENDING_AUTOFILL"
-                });
-
+                // Pending data ఇక్కడ clear చేయవద్దు.
+                // Payment mode selection తర్వాత clear అవుతుంది.
                 console.log(
-                    "[IRCTC Passenger] Passenger autofill successful. " +
-                    "Pending data cleared."
-                );
-            } else {
-                console.warn(
-                    "[IRCTC Passenger] Autofill incomplete. " +
-                    "Pending data retained for retry.",
-                    result
+                    "[IRCTC Passenger] Autofill successful; " +
+                    "pending data retained for payment selection."
                 );
             }
         } catch (error) {
             console.error(
-                "[IRCTC Passenger] Pending autofill failed:",
+                "[IRCTC Autofill] Pending autofill failed:",
                 error
             );
         } finally {
@@ -595,6 +710,60 @@ chrome.runtime.onMessage.addListener(
         }
     }
 
-    // IRCTCలో page navigation/Angular rendering ఆలస్యమైనా retry చేయాలి.
-    setInterval(tryPendingPassengerAutofill, 1000);
+    setInterval(tryPendingAutofill, 1000);
 })();
+
+async function selectPaymentMode(paymentMode) {
+    const expectedValue =
+        paymentMode === "bhim-upi" ? "2" : "3";
+
+    const radio = document.querySelector(
+        `input[name="paymentType"][value="${expectedValue}"]`
+    );
+
+    if (!radio) {
+        console.warn(
+            "[Payment Mode] Radio not found:",
+            expectedValue
+        );
+        return false;
+    }
+
+    if (radio.checked) {
+        console.log(
+            "[Payment Mode] Already selected:",
+            expectedValue
+        );
+        return true;
+    }
+
+    const clickable = radio
+        .closest("p-radiobutton")
+        ?.querySelector(".ui-radiobutton-box");
+
+    if (clickable) {
+        clickable.click();
+    } else {
+        radio.click();
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const selected = document.querySelector(
+        `input[name="paymentType"][value="${expectedValue}"]`
+    );
+
+    const success =
+        selected?.checked === true ||
+        selected?.closest("p-radiobutton")
+            ?.querySelector('[role="radio"]')
+            ?.getAttribute("aria-checked") === "true";
+
+    console.log(
+        "[Payment Mode] Selection result:",
+        expectedValue,
+        success
+    );
+
+    return success;
+}

@@ -417,7 +417,8 @@ async function autoFillRecord(record) {
                 action: "START_BACKGROUND_AUTOFILL",
                 login: record?.login || {},
                 booking,
-                passengerDetails
+                passengerDetails,
+                paymentMode: record?.paymentMode || {}
             },
             response => {
                 if (chrome.runtime.lastError) {
