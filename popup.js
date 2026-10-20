@@ -185,6 +185,7 @@ function getBookingDetails(record) {
 function createRecordCard(record) {
     const booking = getBookingDetails(record);
 
+
     const card = document.createElement("article");
     card.className = "record-card";
 
@@ -386,6 +387,14 @@ async function deleteRecord(recordId) {
 async function autoFillRecord(record) {
     const booking = getBookingDetails(record);
 
+
+    const savedPaymentMode =
+        record?.paymentMode?.paymentMode ||
+        record?.paymentMode ||
+        booking?.paymentMode?.paymentMode ||
+        booking?.paymentMode ||
+        {};
+
     const passengerDetails =
         record?.passengerDetails ||
         booking?.passengerDetails ||
@@ -411,14 +420,14 @@ async function autoFillRecord(record) {
             );
             return;
         }
-
+        
         chrome.runtime.sendMessage(
             {
                 action: "START_BACKGROUND_AUTOFILL",
                 login: record?.login || {},
                 booking,
                 passengerDetails,
-                paymentMode: record?.paymentMode || {}
+                paymentMode: savedPaymentMode
             },
             response => {
                 if (chrome.runtime.lastError) {

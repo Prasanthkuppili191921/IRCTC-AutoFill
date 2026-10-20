@@ -19,7 +19,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             booking.passengerDetails ||
             {};
 
-        const paymentMode = message.paymentMode || {};
+        const isValidPaymentMode = (value) => {
+            const mode = value?.paymentMode || value;
+
+            return mode === "other" || mode === "bhim-upi";
+        };
+
+        const paymentMode = isValidPaymentMode(message.paymentMode)
+            ? message.paymentMode
+            : isValidPaymentMode(message.booking?.paymentMode)
+                ? message.booking.paymentMode
+                : {};
+
+        console.log("paymentMode = " + paymentMode);
 
         chrome.tabs.query(
             { active: true, lastFocusedWindow: true },
@@ -298,9 +310,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+
     // ==========================================
     // CLEAR PENDING AUTOFILL
-    // Existing functionality preserved
+    // Preserve passenger details for manual AutoFill
     // ==========================================
     if (message.action === "CLEAR_PENDING_AUTOFILL") {
         chrome.storage.session.get(PENDING_KEY)
@@ -311,16 +324,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     pending &&
                     sender.tab?.id === pending.tabId
                 ) {
-                    await chrome.storage.session.remove(PENDING_KEY);
+                    await chrome.storage.session.set({
+                        [PENDING_KEY]: {
+                            ...pending,
+                            paymentModeProcessed: true
+                        }
+                    });
                 }
 
                 sendResponse({ success: true });
             })
             .catch((error) => {
-                console.error("CLEAR_PENDING_AUTOFILL error:", error);
+                console.error(
+                    "CLEAR_PENDING_AUTOFILL error:",
+                    error
+                );
                 sendResponse({ success: false });
             });
 
         return true;
     }
+
 });

@@ -1,25 +1,14 @@
-﻿
-"use strict";
+﻿"use strict";
 
 // ======================================================
 // PAGE-AWARE AUTOFILL
 // File: content/content-3.js
-//
-// Existing content-1.js and content-2.js remain unchanged.
-// This file detects the active IRCTC page and routes
-// page-aware requests to existing handlers.
 // ======================================================
 
 const PageAwareAutofill = (() => {
 
-    // --------------------------------------------------
-    // COMMON HELPERS
-    // --------------------------------------------------
-
     function isVisible(element) {
-        if (!element) {
-            return false;
-        }
+        if (!element) return false;
 
         const style = window.getComputedStyle(element);
 
@@ -50,7 +39,6 @@ const PageAwareAutofill = (() => {
 
     function detectIrctcPageContext() {
 
-        // 1. Train List page
         const trainHeadings = getVisibleElements(
             "app-train-avl-enq .train-heading strong"
         );
@@ -63,7 +51,6 @@ const PageAwareAutofill = (() => {
             };
         }
 
-        // 2. Login form
         const usernameFields = getVisibleElements(
             'input[formcontrolname="userid"], ' +
             'input[placeholder="User Name"]'
@@ -86,7 +73,6 @@ const PageAwareAutofill = (() => {
             };
         }
 
-        // 3. Passenger details page
         const passengerInputs = getVisibleElements("input")
             .filter(input => {
                 const description = [
@@ -100,7 +86,9 @@ const PageAwareAutofill = (() => {
                     .join(" ")
                     .toLowerCase();
 
-                return /passenger.?name|psgn.?name/.test(description);
+                return /passenger.?name|psgn.?name/.test(
+                    description
+                );
             });
 
         const bodyText = normalizeText(
@@ -126,7 +114,6 @@ const PageAwareAutofill = (() => {
             };
         }
 
-        // 4. Journey booking form
         const bookingSelectors = [
             "#origin input",
             "#destination input",
@@ -137,7 +124,9 @@ const PageAwareAutofill = (() => {
 
         const bookingFormVisible = bookingSelectors.every(
             selector => {
-                const element = document.querySelector(selector);
+                const element =
+                    document.querySelector(selector);
+
                 return isVisible(element);
             }
         );
@@ -150,7 +139,6 @@ const PageAwareAutofill = (() => {
             };
         }
 
-        // 5. Unsupported page
         return {
             pageType: "unsupported",
             confidence: "none",
@@ -177,7 +165,8 @@ const PageAwareAutofill = (() => {
             return {
                 success: false,
                 pageType: "login",
-                message: "Existing login autofill method అందుబాటులో లేదు."
+                message:
+                    "Existing login autofill method అందుబాటులో లేదు."
             };
         }
 
@@ -229,15 +218,18 @@ const PageAwareAutofill = (() => {
             booking.flexibleDate
         );
 
-        console.log("[IRCTC PageAware] Saved Auto-Fill record:", {
-            trainNumber,
-            fromStation,
-            toStation,
-            journeyDate,
-            travelClass,
-            quota,
-            flexibleDate
-        });
+        console.log(
+            "[IRCTC PageAware] Saved Auto-Fill record:",
+            {
+                trainNumber,
+                fromStation,
+                toStation,
+                journeyDate,
+                travelClass,
+                quota,
+                flexibleDate
+            }
+        );
 
         if (!fromStation || !toStation || !journeyDate) {
             return {
@@ -251,7 +243,8 @@ const PageAwareAutofill = (() => {
         if (!trainNumber) {
             return {
                 success: false,
-                message: "Auto-Fill formలో Train Number save కాలేదు.",
+                message:
+                    "Auto-Fill formలో Train Number save కాలేదు.",
                 pageType: "train-list"
             };
         }
@@ -259,7 +252,8 @@ const PageAwareAutofill = (() => {
         if (!travelClass) {
             return {
                 success: false,
-                message: "Auto-Fill formలో Travel Class save కాలేదు.",
+                message:
+                    "Auto-Fill formలో Travel Class save కాలేదు.",
                 pageType: "train-list"
             };
         }
@@ -267,7 +261,8 @@ const PageAwareAutofill = (() => {
         if (typeof checkSavedTrainOnPage !== "function") {
             return {
                 success: false,
-                message: "Train selection function అందుబాటులో లేదు.",
+                message:
+                    "Train selection function అందుబాటులో లేదు.",
                 pageType: "train-list"
             };
         }
@@ -302,7 +297,8 @@ const PageAwareAutofill = (() => {
             return {
                 success: false,
                 message:
-                    error?.message || "Train List Auto-Fill failed.",
+                    error?.message ||
+                    "Train List Auto-Fill failed.",
                 pageType: "train-list"
             };
         }
@@ -311,6 +307,7 @@ const PageAwareAutofill = (() => {
     // --------------------------------------------------
     // PASSENGER PAGE HANDLER
     // --------------------------------------------------
+
 
     async function handlePassengerPageAutofill(message) {
         const passengerDetails =
@@ -322,7 +319,6 @@ const PageAwareAutofill = (() => {
             ? passengerDetails.passengers
             : [];
 
-        // Backward compatibility for older record structures.
         if (passengers.length === 0) {
             if (Array.isArray(message?.booking?.passengers)) {
                 passengers = message.booking.passengers;
@@ -340,7 +336,7 @@ const PageAwareAutofill = (() => {
             return {
                 success: false,
                 pageType: "passenger",
-                message: "Saved passenger details లేవు."
+                message: "Saved passenger details levu."
             };
         }
 
@@ -348,10 +344,11 @@ const PageAwareAutofill = (() => {
             return {
                 success: false,
                 pageType: "passenger",
-                message: "Passenger autofill function అందుబాటులో లేదు."
+                message: "Passenger autofill function andubatulo ledu."
             };
         }
 
+        // Passenger details
         const result = await Promise.resolve(
             fillPassengerDetails({
                 passengers,
@@ -359,14 +356,57 @@ const PageAwareAutofill = (() => {
             })
         );
 
+        // Latest payment mode — only one declaration
+        const paymentMode =
+            message?.paymentMode ||
+            message?.booking?.paymentMode;
+
+        let paymentModeResult = null;
+
+        if (paymentMode) {
+            try {
+                const selected = await selectPaymentMode(paymentMode);
+
+                paymentModeResult = {
+                    success: selected,
+                    message: selected
+                        ? "Payment mode selected."
+                        : "Payment mode select kaaledu."
+                };
+            } catch (error) {
+                console.error(
+                    "[IRCTC Payment] Selection failed:",
+                    error
+                );
+
+                paymentModeResult = {
+                    success: false,
+                    message: error?.message ||
+                        "Payment mode selection failed."
+                };
+            }
+        }
+
+        // Passenger AutoFill పూర్తయిన తర్వాత Continue క్లిక్ చేయాలి
+        if (result?.success) {
+            const continueClicked = await clickContinueButton();
+
+            console.log(
+                "[IRCTC Passenger] Continue result:",
+                continueClicked
+            );
+        }
+
         return {
             ...result,
             pageType: "passenger",
             passengersAvailable: passengers.length,
             contactDetailsAvailable:
-                Object.keys(contactDetails).length > 0
+                Object.keys(contactDetails).length > 0,
+            paymentModeResult
         };
     }
+
 
     // --------------------------------------------------
     // PAGE-AWARE DISPATCHER
@@ -402,10 +442,6 @@ const PageAwareAutofill = (() => {
                 };
         }
     }
-
-    // --------------------------------------------------
-    // PUBLIC API
-    // --------------------------------------------------
 
     return {
         detectIrctcPageContext,
@@ -448,7 +484,8 @@ chrome.runtime.onMessage.addListener(
                     sendResponse({
                         success: false,
                         pageType: "unknown",
-                        message: "Page-aware AutoFill విఫలమైంది."
+                        message:
+                            "Page-aware AutoFill విఫలమైంది."
                     });
                 });
 
@@ -457,19 +494,24 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+
 // ======================================================
 // AUTOMATIC PASSENGER AND PAYMENT MODE AUTOFILL
 // ======================================================
 
 (() => {
-    let lastProcessedKey = "";
     let processing = false;
+    let passengerProcessedKey = "";
+    let paymentProcessedKey = "";
+    let reviewProcessedKey = "";
 
     const sleep = ms =>
         new Promise(resolve => setTimeout(resolve, ms));
 
     function isPassengerPage() {
-        return /psgninput|passenger-details/i.test(location.href);
+        return /psgninput|passenger-details/i.test(
+            window.location.href
+        );
     }
 
     function isPaymentPage() {
@@ -478,43 +520,57 @@ chrome.runtime.onMessage.addListener(
             'input[name="paymentType"][value="3"]'
         );
 
-        if (paymentRadio && paymentRadio.getClientRects().length > 0) {
+        if (
+            paymentRadio &&
+            paymentRadio.getClientRects().length > 0
+        ) {
             return true;
         }
 
-        return /payment|bank|bhim|upi/i.test(location.href) ||
+        return (
+            /payment|bank|bhim|upi/i.test(
+                window.location.href
+            ) ||
             /payment mode|bhim\s*\/?\s*upi/i.test(
                 document.body?.innerText || ""
-            );
+            )
+        );
+    }
+
+    function isReviewBookingPage() {
+        return window.location.pathname.includes(
+            "/nget/booking/reviewBooking"
+        );
     }
 
     function passengerFormReady() {
-        return Boolean(document.querySelector(
-            'input[formcontrolname="passengerName"], ' +
-            'input[name*="passengerName" i], ' +
-            'input[placeholder*="name" i]'
-        ));
+        return Boolean(
+            document.querySelector(
+                'input[formcontrolname="passengerName"], ' +
+                'input[name*="passengerName" i], ' +
+                'input[placeholder*="name" i]'
+            )
+        );
     }
 
-    function normalizeText(value) {
-        return String(value || "")
-            .replace(/\s+/g, " ")
-            .trim()
-            .toLowerCase();
-    }
+    // --------------------------------------------------
+    // PAYMENT MODE SELECTION
+    // --------------------------------------------------
 
     async function selectSavedPaymentMode(paymentModeData) {
         const mode =
             paymentModeData?.paymentMode || paymentModeData;
 
         const expectedValue =
-            mode === "bhim-upi" ? "2" :
-                mode === "other" ? "3" :
-                    null;
+            mode === "bhim-upi"
+                ? "2"
+                : mode === "other"
+                    ? "3"
+                    : null;
 
         if (!expectedValue) {
             console.warn(
-                "[IRCTC Payment] Invalid or missing saved mode:",
+                "[IRCTC Payment] Saved payment mode is missing or invalid.",
                 paymentModeData
             );
 
@@ -524,32 +580,34 @@ chrome.runtime.onMessage.addListener(
             };
         }
 
-        const deadline = Date.now() + 15000;
+        const deadline = Date.now() + 5000;
 
         while (Date.now() < deadline) {
             const radio = document.querySelector(
                 `input[name="paymentType"][value="${expectedValue}"]`
             );
 
-            if (radio && radio.getClientRects().length > 0) {
-                const radioBox = radio
-                    .closest("p-radiobutton")
-                    ?.querySelector(".ui-radiobutton-box");
+            if (
+                radio &&
+                radio.getClientRects().length > 0
+            ) {
+                const container =
+                    radio.closest("p-radiobutton");
 
                 const isSelected = () =>
                     radio.checked ||
-                    radio.closest("p-radiobutton")
+                    container
                         ?.querySelector('[role="radio"]')
                         ?.getAttribute("aria-checked") === "true";
 
                 if (isSelected()) {
-                    console.log(
-                        "[IRCTC Payment] Already selected:",
-                        expectedValue
-                    );
-
                     return { success: true };
                 }
+
+                const radioBox =
+                    container?.querySelector(
+                        ".ui-radiobutton-box"
+                    );
 
                 if (radioBox) {
                     radioBox.click();
@@ -561,26 +619,16 @@ chrome.runtime.onMessage.addListener(
 
                 if (isSelected()) {
                     console.log(
-                        "[IRCTC Payment] Selected successfully:",
+                        "[IRCTC Payment] Payment mode selected:",
                         expectedValue
                     );
 
                     return { success: true };
                 }
-
-                console.warn(
-                    "[IRCTC Payment] Click attempted; selection not confirmed.",
-                    expectedValue
-                );
             }
 
-            await sleep(500);
+            await sleep(300);
         }
-
-        console.warn(
-            "[IRCTC Payment] Payment option was not selected:",
-            expectedValue
-        );
 
         return {
             success: false,
@@ -588,117 +636,179 @@ chrome.runtime.onMessage.addListener(
         };
     }
 
+    // --------------------------------------------------
+    // PENDING AUTOFILL DATA
+    // --------------------------------------------------
+
+    async function getPendingData() {
+        const response = await chrome.runtime.sendMessage({
+            action: "GET_PENDING_AUTOFILL"
+        });
+
+        return (
+            response?.success && response.pending
+                ? response.pending
+                : null
+        );
+    }
+
+    // --------------------------------------------------
+    // AUTOMATIC AUTOFILL
+    // --------------------------------------------------
+
     async function tryPendingAutofill() {
-        const url = location.href;
+        if (processing) return;
 
-        // Payment page detection must take priority.
+        const passengerPage = isPassengerPage();
         const paymentPage = isPaymentPage();
-        const passengerPage = !paymentPage && isPassengerPage();
+        const reviewPage = isReviewBookingPage();
 
-        if (!passengerPage && !paymentPage) {
+        if (!passengerPage && !paymentPage && !reviewPage) {
             return;
         }
 
-        // Same URL can display passenger and payment steps in an SPA.
-        const processKey = paymentPage
-            ? `payment:${url}`
-            : `passenger:${url}`;
-
-
-        if (!paymentPage && lastProcessedKey === processKey) {
-            return;
-        }
+        const pageKey = window.location.href;
 
         processing = true;
 
         try {
-            const response = await chrome.runtime.sendMessage({
-                action: "GET_PENDING_AUTOFILL"
-            });
+            // ------------------------------------------
+            // REVIEW BOOKING PAGE
+            // ------------------------------------------
+            if (reviewPage) {
+                if (reviewProcessedKey !== pageKey) {
+                    const continueClicked =
+                        await clickContinueButton();
 
-            if (!response?.success || !response.pending) {
+                    console.log(
+                        "[IRCTC Review] Continue result:",
+                        continueClicked
+                    );
+
+                    if (continueClicked) {
+                        reviewProcessedKey = pageKey;
+                    }
+                }
+
                 return;
             }
 
-            const pending = response.pending;
+            // ------------------------------------------
+            // EXISTING PASSENGER / PAYMENT AUTOFILL
+            // ------------------------------------------
+            const pending = await getPendingData();
 
-            if (paymentPage) {
-                const result = await selectSavedPaymentMode(
-                    pending.paymentMode ||
-                    pending.booking?.paymentMode
+            if (!pending) return;
+
+            // ------------------------------------------
+            // PASSENGER DETAILS
+            // ------------------------------------------
+
+            if (
+                passengerPage &&
+                passengerProcessedKey !== pageKey
+            ) {
+                const passengerDetails =
+                    pending.passengerDetails ||
+                    pending.booking?.passengerDetails ||
+                    {};
+
+                const passengers = Array.isArray(
+                    passengerDetails.passengers
+                )
+                    ? passengerDetails.passengers
+                    : Array.isArray(
+                        pending.booking?.passengers
+                    )
+                        ? pending.booking.passengers
+                        : pending.booking?.passenger
+                            ? [pending.booking.passenger]
+                            : [];
+
+                if (passengers.length === 0) {
+                    console.warn(
+                        "[IRCTC Passenger] Saved passenger details are missing."
+                    );
+
+                    return;
+                }
+
+                const deadline = Date.now() + 15000;
+
+                while (
+                    Date.now() < deadline &&
+                    !passengerFormReady()
+                ) {
+                    await sleep(300);
+                }
+
+                if (!passengerFormReady()) {
+                    console.warn(
+                        "[IRCTC Passenger] Passenger form did not load in time."
+                    );
+
+                    return;
+                }
+
+                const result =
+                    await PageAwareAutofill.handlePageAwareAutofill({
+                        passengerDetails,
+                        booking: pending.booking,
+                        login: pending.login
+                    });
+
+                console.log(
+                    "[IRCTC Passenger] Autofill result:",
+                    result
                 );
 
-                if (result.success) {
-                    lastProcessedKey = processKey;
+                if (!result?.success) {
+                    console.warn(
+                        "[IRCTC Passenger] Autofill failed; pending data retained."
+                    );
+
+                    return;
+                }
+
+                passengerProcessedKey = pageKey;
+
+                console.log(
+                    "[IRCTC Passenger] Autofill successful; pending data retained."
+                );
+            }
+
+            // ------------------------------------------
+            // PAYMENT MODE
+            // Same page or separate payment page
+            // ------------------------------------------
+
+            if (
+                (passengerPage || paymentPage) &&
+                paymentProcessedKey !== pageKey
+            ) {
+                const paymentMode =
+                    pending.paymentMode ||
+                    pending.booking?.paymentMode;
+
+                const paymentResult =
+                    await selectSavedPaymentMode(paymentMode);
+
+                if (paymentResult.success) {
+                    paymentProcessedKey = pageKey;
 
                     await chrome.runtime.sendMessage({
                         action: "CLEAR_PENDING_AUTOFILL"
                     });
 
                     console.log(
-                        "[IRCTC Payment] Payment mode selected."
+                        "[IRCTC Payment] Payment Mode selected; pending data cleared."
+                    );
+                } else {
+                    console.warn(
+                        "[IRCTC Payment] Payment Mode not selected yet; will retry.",
+                        paymentResult.reason
                     );
                 }
-
-                return;
-            }
-
-            const passengerDetails =
-                pending.passengerDetails ||
-                pending.booking?.passengerDetails ||
-                {};
-
-            const passengers = Array.isArray(
-                passengerDetails.passengers
-            )
-                ? passengerDetails.passengers
-                : Array.isArray(pending.booking?.passengers)
-                    ? pending.booking.passengers
-                    : pending.booking?.passenger
-                        ? [pending.booking.passenger]
-                        : [];
-
-            if (passengers.length === 0) {
-                console.warn(
-                    "[IRCTC Passenger] Saved passenger details missing."
-                );
-                return;
-            }
-
-            const deadline = Date.now() + 15000;
-
-            while (
-                Date.now() < deadline &&
-                !passengerFormReady()
-            ) {
-                await sleep(300);
-            }
-
-            if (!passengerFormReady()) {
-                return;
-            }
-
-            const result =
-                await PageAwareAutofill.handlePageAwareAutofill({
-                    passengerDetails,
-                    booking: pending.booking,
-                    login: pending.login
-                });
-
-            console.log(
-                "[IRCTC Passenger] Autofill result:",
-                result
-            );
-
-            if (result?.success) {
-                lastProcessedKey = processKey;
-
-                // Pending data ఇక్కడ clear చేయవద్దు.
-                // Payment mode selection తర్వాత clear అవుతుంది.
-                console.log(
-                    "[IRCTC Passenger] Autofill successful; " +
-                    "pending data retained for payment selection."
-                );
             }
         } catch (error) {
             console.error(
@@ -710,60 +820,129 @@ chrome.runtime.onMessage.addListener(
         }
     }
 
+    // Angular may render the payment options after
+    // passenger fields. Retry without refilling passengers.
     setInterval(tryPendingAutofill, 1000);
+
 })();
 
+// ------------------------------------------------------
+// EXISTING PAYMENT MODE FUNCTION
+// ------------------------------------------------------
+
+
 async function selectPaymentMode(paymentMode) {
+    const mode =
+        paymentMode?.paymentMode || paymentMode;
+
     const expectedValue =
-        paymentMode === "bhim-upi" ? "2" : "3";
+        mode === "bhim-upi"
+            ? "2"
+            : mode === "other"
+                ? "3"
+                : null;
 
-    const radio = document.querySelector(
-        `input[name="paymentType"][value="${expectedValue}"]`
-    );
-
-    if (!radio) {
+    if (!expectedValue) {
         console.warn(
-            "[Payment Mode] Radio not found:",
-            expectedValue
+            "[IRCTC Payment] Saved payment mode missing or invalid:",
+            paymentMode
         );
         return false;
     }
 
-    if (radio.checked) {
-        console.log(
-            "[Payment Mode] Already selected:",
-            expectedValue
+    const deadline = Date.now() + 5000;
+
+    while (Date.now() < deadline) {
+        const radio = document.querySelector(
+            `input[name="paymentType"][value="${expectedValue}"]`
         );
-        return true;
+
+        if (radio && radio.getClientRects().length > 0) {
+            const container = radio.closest("p-radiobutton");
+
+            const isSelected = () =>
+                radio.checked ||
+                container
+                    ?.querySelector('[role="radio"]')
+                    ?.getAttribute("aria-checked") === "true";
+
+            if (isSelected()) {
+                console.log(
+                    "[IRCTC Payment] Already selected:",
+                    expectedValue
+                );
+                return true;
+            }
+
+            const radioBox = container?.querySelector(
+                ".ui-radiobutton-box"
+            );
+
+            if (radioBox) {
+                radioBox.click();
+            } else {
+                radio.click();
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            if (isSelected()) {
+                console.log(
+                    "[IRCTC Payment] Payment mode selected:",
+                    expectedValue
+                );
+                return true;
+            }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    const clickable = radio
-        .closest("p-radiobutton")
-        ?.querySelector(".ui-radiobutton-box");
-
-    if (clickable) {
-        clickable.click();
-    } else {
-        radio.click();
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const selected = document.querySelector(
-        `input[name="paymentType"][value="${expectedValue}"]`
+    console.warn(
+        "[IRCTC Payment] Payment option not found or not selected:",
+        expectedValue
     );
 
-    const success =
-        selected?.checked === true ||
-        selected?.closest("p-radiobutton")
-            ?.querySelector('[role="radio"]')
-            ?.getAttribute("aria-checked") === "true";
+    return false;
+}
+
+async function clickContinueButton() {
+    const continueButton = document.querySelector(
+        'button.train_Search[type="submit"]'
+    );
+
+    if (!continueButton) {
+        console.warn("Continue button not found.");
+        return false;
+    }
+
+    if (continueButton.disabled) {
+        console.warn("Continue button is disabled.");
+        return false;
+    }
+
+    continueButton.click();
+    console.log("Continue button clicked.");
+    return true;
+}
+
+async function handleReviewBookingPage() {
+    const isReviewPage = window.location.pathname.includes(
+        "/nget/booking/reviewBooking"
+    );
+
+    if (!isReviewPage) {
+        return;
+    }
 
     console.log(
-        "[Payment Mode] Selection result:",
-        expectedValue,
-        success
+        "[IRCTC Review] Review Booking page detected."
     );
 
-    return success;
+    const continueClicked = await clickContinueButton();
+
+    console.log(
+        "[IRCTC Review] Continue result:",
+        continueClicked
+    );
 }
